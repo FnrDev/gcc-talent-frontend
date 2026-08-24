@@ -63,8 +63,8 @@ nav a{
     --card-foreground: oklch(0.141 0.005 285.823);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.141 0.005 285.823);
-    --primary: oklch(0.508 0.118 165.612);
-    --primary-foreground: oklch(0.979 0.021 166.113);
+    --primary: oklch(0.368 0.031 205.403);
+    --primary-foreground: oklch(0.958 0.010 67.703);
     --secondary: oklch(0.967 0.001 286.375);
     --secondary-foreground: oklch(0.21 0.006 285.885);
     --muted: oklch(0.967 0.001 286.375);
@@ -83,8 +83,8 @@ nav a{
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.141 0.005 285.823);
-    --sidebar-primary: oklch(0.596 0.145 163.225);
-    --sidebar-primary-foreground: oklch(0.979 0.021 166.113);
+    --sidebar-primary: oklch(0.368 0.031 205.403);
+    --sidebar-primary-foreground: oklch(0.958 0.010 67.703);
     --sidebar-accent: oklch(0.967 0.001 286.375);
     --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
     --sidebar-border: oklch(0.92 0.004 286.32);
