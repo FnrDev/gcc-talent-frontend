@@ -35,6 +35,13 @@ const freelancerLinks = [
 
 function Navbar() {
   const { logout, user } = useAuth()
+  const avatarFallback = user?.name
+    ?.split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'GT'
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
@@ -100,13 +107,19 @@ function Navbar() {
 
         {user ? (
           <DropdownMenu>
-            <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            <DropdownMenuTrigger
+              className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              aria-label={`Open account menu for ${user.name}`}
+            >
               <Avatar size="sm">
-                <AvatarFallback>{user.username?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarFallback>{avatarFallback}</AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem render={<Link to="/dashboard" />}>Dashboard</DropdownMenuItem>
+              {user.role === 'admin' ? (
+                <DropdownMenuItem render={<Link to="/admin" />}>Admin Panel</DropdownMenuItem>
+              ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={logout}>
                 Sign Out

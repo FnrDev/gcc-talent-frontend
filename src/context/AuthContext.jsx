@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
         const user = await getCurrentUser();
 
         setUser(user);
-      } catch (error) {
+      } catch {
         localStorage.removeItem("token");
 
         setUser(null);
@@ -32,6 +32,15 @@ export function AuthProvider({ children }) {
     }
 
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    function handleUnauthorized() {
+      setUser(null);
+    }
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
   }, []);
 
   function handleLogout() {
@@ -54,6 +63,8 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Hooks and their provider intentionally share this small context module.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext);
 }

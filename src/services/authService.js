@@ -1,40 +1,33 @@
-
 import api from './api'
 
-async function signUp(formData){
-    const response = await api.post('/auth/sign-up',formData)
+async function signUp(formData) {
+  const response = await api.post('/auth/register', formData)
+
+  return response.data.data.user
 }
 
-async function signIn(formData){
-    const response = await api.post('/auth/sign-in',formData)
-    localStorage.setItem('token', response.data.accessToken);
-    return response.data.user
+async function signIn(formData) {
+  const response = await api.post('/auth/login', formData)
+  const { accessToken, user } = response.data.data
+
+  localStorage.setItem('token', accessToken)
+
+  return user
 }
 
+async function getCurrentUser() {
+  const response = await api.get('/auth/me')
 
-async function getCurrentUser(){
-
-    const response = await api.get(
-        "/auth/me"
-    );
-
-
-    return response.data;
-
+  return response.data.data.user
 }
 
-
-
-function logout(){
-
-    localStorage.removeItem("token");
-
+function logout() {
+  localStorage.removeItem('token')
 }
 
 export {
   signUp,
   signIn,
   getCurrentUser,
-  logout
-};
-
+  logout,
+}
