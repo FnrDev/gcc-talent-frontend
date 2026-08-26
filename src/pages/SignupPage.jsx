@@ -1,86 +1,204 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { signUp } from "../services/authService";
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { signUp } from '../services/authService'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { Spinner } from '@/components/ui/spinner'
 
-function Signup() {
-  const navigate = useNavigate();
-  const [error, setError] = useState("");
+function SignupPage() {
+  const navigate = useNavigate()
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-    passwordConf: "",
-  });
-  const [ submitting, setSubmitting ] = useState(false)
+    name: '',
+    email: '',
+    role: 'freelancer',
+    password: '',
+    passwordConfirmation: '',
+  })
 
-  const { username, password, passwordConf } = formData;
+  const passwordsMatch =
+    !formData.passwordConfirmation || formData.password === formData.passwordConfirmation
+  const isFormInvalid =
+    !formData.name.trim() ||
+    !formData.email.trim() ||
+    formData.password.length < 8 ||
+    !formData.passwordConfirmation ||
+    !passwordsMatch
 
-  function handleChange(event){
-    setError("");
-    setFormData({ ...formData, [event.target.name]: event.target.value });
-
+  function handleChange(event) {
+    setError('')
+    setFormData((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }))
   }
 
+  async function handleSubmit(event) {
+    event.preventDefault()
 
-  async function handleSubmit(event){
-    event.preventDefault();
+    if (isFormInvalid) return
+
+    setError('')
+    setSubmitting(true)
+
     try {
-      setSubmitting(true)
-      await signUp(formData);
-      navigate('/sign-in')
-    } catch (err) {
-      setError(err.response.data.message);
+      await signUp({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: formData.role,
+        password: formData.password,
+      })
+      navigate('/sign-in', {
+        replace: true,
+        state: { message: 'Your account is ready. Sign in to get started.' },
+      })
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message ||
+          'We could not create your account. Please try again.',
+      )
+    } finally {
       setSubmitting(false)
     }
   }
 
-  function isFormInvalid(){
-    return !(username && password && password === passwordConf);
-  };
-
   return (
-    <main>
-      <h1>Sign Up</h1>
-      <p className="error">{error}</p>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="username">Username:</label>
-          <input
-            type="text"
-            id="username"
-            value={username}
-            name="username"
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Password:</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            name="password"
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="confirm">Confirm Password:</label>
-          <input
-            type="password"
-            id="confirm"
-            value={passwordConf}
-            name="passwordConf"
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <button disabled={isFormInvalid() || submitting}>{submitting ? 'Signing up...' : 'Sign Up'}</button>
-          <button onClick={() => navigate("/")}>Cancel</button>
-        </div>
-      </form>
+    <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-muted/30 px-4 py-12">
+      <Card className="w-full max-w-lg shadow-sm">
+        <CardHeader className="gap-2 text-center">
+          <div className="mx-auto mb-1 flex size-10 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
+            G
+          </div>
+          <CardTitle className="text-2xl">Join GCC Talents</CardTitle>
+          <CardDescription>
+            Create your account and start building trusted GCC connections.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form id="sign-up-form" onSubmit={handleSubmit} noValidate>
+            <FieldGroup>
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="name">Full name</FieldLabel>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Your name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="role">I want to</FieldLabel>
+                  <NativeSelect
+                    id="role"
+                    name="role"
+                    className="w-full"
+                    value={formData.role}
+                    onChange={handleChange}
+                    aria-label="Account type"
+                  >
+                    <NativeSelectOption value="freelancer">Find freelance work</NativeSelectOption>
+                    <NativeSelectOption value="client">Hire GCC talent</NativeSelectOption>
+                  </NativeSelect>
+                </Field>
+              </div>
+
+              <Field>
+                <FieldLabel htmlFor="email">Email address</FieldLabel>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  minLength={8}
+                />
+                <FieldDescription>Use 8 or more characters.</FieldDescription>
+              </Field>
+
+              <Field data-invalid={!passwordsMatch || undefined}>
+                <FieldLabel htmlFor="passwordConfirmation">Confirm password</FieldLabel>
+                <Input
+                  id="passwordConfirmation"
+                  name="passwordConfirmation"
+                  type="password"
+                  autoComplete="new-password"
+                  value={formData.passwordConfirmation}
+                  onChange={handleChange}
+                  aria-invalid={!passwordsMatch}
+                  required
+                />
+                {!passwordsMatch ? <FieldError>Passwords do not match.</FieldError> : null}
+              </Field>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="h-10 w-full"
+                disabled={submitting || isFormInvalid}
+              >
+                {submitting ? (
+                  <>
+                    <Spinner />
+                    Creating account…
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </FieldGroup>
+          </form>
+        </CardContent>
+
+        <CardFooter className="justify-center text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <Link className="ml-1 font-medium text-foreground underline-offset-4 hover:underline" to="/sign-in">
+            Sign in
+          </Link>
+        </CardFooter>
+      </Card>
     </main>
-  );
+  )
 }
-export default Signup;
+
+export default SignupPage
