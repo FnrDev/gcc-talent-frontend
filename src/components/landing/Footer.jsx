@@ -1,6 +1,5 @@
 import { Link } from 'react-router'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { Briefcase01Icon } from '@hugeicons/core-free-icons'
+import BrandLogo from '@/components/BrandLogo'
 
 const columns = [
   {
@@ -33,9 +32,7 @@ function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-16 lg:pl-10">
           <div className="flex items-center gap-2 lg:w-40">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <HugeiconsIcon icon={Briefcase01Icon} strokeWidth={2} className="size-4" />
-            </span>
+            <BrandLogo className="size-7" alt="" />
             <span className="font-semibold text-foreground">GCC Talents</span>
           </div>
 

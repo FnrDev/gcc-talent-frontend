@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { signIn } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
+import BrandLogo from '@/components/BrandLogo'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -62,9 +63,7 @@ function SigninPage() {
     <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-muted/30 px-4 py-12">
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="gap-2 text-center">
-          <div className="mx-auto mb-1 flex size-10 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
-            G
-          </div>
+          <BrandLogo className="mx-auto mb-1 size-10" />
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>
             Sign in to manage your work on GCC Talents.
@@ -104,7 +103,12 @@ function SigninPage() {
               <Field>
                 <div className="flex items-center justify-between">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <span className="text-xs text-muted-foreground">At least 8 characters</span>
+                  <Link
+                    className="text-xs font-medium text-foreground underline-offset-4 hover:underline"
+                    to="/forgot-password"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
                 <Input
                   id="password"

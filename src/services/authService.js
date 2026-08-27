@@ -21,6 +21,18 @@ async function getCurrentUser() {
   return response.data.data.user
 }
 
+async function requestPasswordReset(email) {
+  const response = await api.post('/auth/forgot-password', { email })
+
+  return response.data
+}
+
+async function resetPassword(token, newPassword) {
+  const response = await api.post('/auth/reset-password', { token, newPassword })
+
+  return response.data
+}
+
 function logout() {
   localStorage.removeItem('token')
 }
@@ -29,5 +41,7 @@ export {
   signUp,
   signIn,
   getCurrentUser,
+  requestPasswordReset,
+  resetPassword,
   logout,
 }

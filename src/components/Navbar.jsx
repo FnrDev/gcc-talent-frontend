@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Briefcase01Icon } from '@hugeicons/core-free-icons'
 import { useAuth } from '../context/AuthContext'
+import BrandLogo from '@/components/BrandLogo'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -48,9 +48,7 @@ function Navbar() {
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2 font-semibold text-foreground">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <HugeiconsIcon icon={Briefcase01Icon} strokeWidth={2} className="size-4" />
-            </span>
+            <BrandLogo className="size-7" alt="" />
             GCC Talents
           </Link>
 

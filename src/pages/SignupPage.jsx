@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { signUp } from '../services/authService'
+import BrandLogo from '@/components/BrandLogo'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -78,9 +79,7 @@ function SignupPage() {
     <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-muted/30 px-4 py-12">
       <Card className="w-full max-w-lg shadow-sm">
         <CardHeader className="gap-2 text-center">
-          <div className="mx-auto mb-1 flex size-10 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
-            G
-          </div>
+          <BrandLogo className="mx-auto mb-1 size-10" />
           <CardTitle className="text-2xl">Join GCC Talents</CardTitle>
           <CardDescription>
             Create your account and start building trusted GCC connections.

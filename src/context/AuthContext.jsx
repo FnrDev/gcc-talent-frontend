@@ -21,11 +21,15 @@ export function AuthProvider({ children }) {
       try {
         const user = await getCurrentUser();
 
-        setUser(user);
+        // An in-flight lookup must not restore a session after a password reset.
+        if (localStorage.getItem("token") === token) {
+          setUser(user);
+        }
       } catch {
-        localStorage.removeItem("token");
-
-        setUser(null);
+        if (localStorage.getItem("token") === token) {
+          localStorage.removeItem("token");
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }

@@ -2,7 +2,6 @@ import { Link } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   BookOpen01Icon,
-  Briefcase01Icon,
   DashboardSquare01Icon,
   FolderLibraryIcon,
   Home01Icon,
@@ -10,6 +9,7 @@ import {
   UserGroupIcon,
 } from "@hugeicons/core-free-icons"
 
+import BrandLogo from "@/components/BrandLogo"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Sidebar,
@@ -53,19 +53,18 @@ function AdminSidebar({ activeSection, onSectionChange, user, onLogout }) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-3">
+      <SidebarHeader className="p-3 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
               tooltip="GCC Talents Admin"
+              aria-label="GCC Talents home"
               render={<Link to="/" />}
-              className="group-data-[collapsible=icon]:justify-center"
+              className="group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <HugeiconsIcon icon={Briefcase01Icon} strokeWidth={2} />
-              </span>
-              <span className="grid flex-1 text-left leading-tight">
+              <BrandLogo alt="" />
+              <span className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="truncate font-semibold">GCC Talents</span>
                 <span className="truncate text-xs text-muted-foreground">Administration</span>
               </span>
