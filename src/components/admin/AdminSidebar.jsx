@@ -1,6 +1,7 @@
 import { Link } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
+  Audit01Icon,
   BookOpen01Icon,
   DashboardSquare01Icon,
   FolderLibraryIcon,
@@ -32,6 +33,7 @@ const adminNavigation = [
   { id: "users", label: "Users", icon: UserGroupIcon },
   { id: "categories", label: "Categories", icon: FolderLibraryIcon },
   { id: "skills", label: "Skills", icon: BookOpen01Icon },
+  { id: "audit-logs", label: "Audit logs", icon: Audit01Icon },
 ]
 
 function initials(name) {

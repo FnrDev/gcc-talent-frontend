@@ -24,7 +24,11 @@ const columns = [
   },
 ]
 
-const legalLinks = ['Privacy Policy', 'Terms of Service', 'Cookie Policy']
+const legalLinks = [
+  { label: 'Privacy Policy', to: '/privacy' },
+  { label: 'Terms of Service', to: '/terms' },
+  { label: 'Cookie Policy', to: '/privacy#cookies' },
+]
 
 function Footer() {
   return (
@@ -60,11 +64,11 @@ function Footer() {
         <div className="mt-16 flex flex-wrap gap-x-6 gap-y-2">
           {legalLinks.map((link) => (
             <Link
-              key={link}
-              to="#"
+              key={link.to}
+              to={link.to}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
-              {link}
+              {link.label}
             </Link>
           ))}
         </div>
