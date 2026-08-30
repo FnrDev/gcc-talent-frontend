@@ -143,6 +143,22 @@ Follow these steps to set up and run the React frontend locally.
 
 ## Routes
 
+### Admin audit logs
+
+Open **Admin → Audit logs**, or `/admin?section=audit-logs`, with an active administrator
+account. The read-only page loads real records from `GET /admin/audit-logs` on the backend
+configured by `VITE_BACK_END_SERVER_URL`.
+
+The table shows the time, actor, action, affected resource, and operation. Filter by action,
+resource, or a local-calendar date range; search by operation, endpoint, or exact record/user
+ID. Pagination and refresh load current server results. Open a record's details to inspect
+its full IDs, changed fields, bulk-operation count, and request metadata.
+
+Deleted users retain their recorded actor ID; anonymous and system actions are labelled
+separately. This page has no edit/delete controls and does not create audit events when read.
+Backend authorization re-checks the account's current role/status. Deploy the matching
+backend audit-list endpoint before using this page against a remote API.
+
 
 ## Features
 

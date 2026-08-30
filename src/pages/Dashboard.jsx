@@ -1,14 +1,21 @@
+import { Link, useLocation } from 'react-router'
 import { useAuth } from '../context/AuthContext'
-import UserLink from '@/components/UserLink'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 function Dashboard() {
   const { user } = useAuth()
+  const location = useLocation()
   const firstName = user?.name?.trim().split(/\s+/)[0] || 'there'
 
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-6xl px-4 py-10">
+      {location.state?.message ? (
+        <Alert className="mb-6 max-w-xl">
+          <AlertDescription>{location.state.message}</AlertDescription>
+        </Alert>
+      ) : null}
       <div className="mb-8">
         <p className="text-sm font-medium text-primary">Dashboard</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Welcome back, {firstName}</h1>
@@ -25,7 +32,7 @@ function Dashboard() {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</p>
-            <UserLink user={user} className="mt-1" nameClassName="font-medium" />
+            <p className="mt-1 font-medium">{user?.name}</p>
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Email</p>
@@ -45,6 +52,20 @@ function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <p className="mt-6 text-sm text-muted-foreground">
+        {user?.role === 'client' ? (
+          <>
+            Ready to hire? <Link to="/jobs/new" className="font-medium text-primary underline underline-offset-4">Post a job</Link>
+            {' '}or <Link to="/jobs/mine" className="font-medium text-primary underline underline-offset-4">manage your jobs</Link>.
+          </>
+        ) : user?.role === 'freelancer' ? (
+          <>
+            Looking for work? <Link to="/jobs" className="font-medium text-primary underline underline-offset-4">Browse jobs</Link>
+            {' '}or <Link to="/proposals" className="font-medium text-primary underline underline-offset-4">track your proposals</Link>.
+          </>
+        ) : null}
+      </p>
     </main>
   )
 }

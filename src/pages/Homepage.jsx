@@ -24,7 +24,7 @@ function Homepage() {
         title="Post a job and get proposals within 24 hours"
         description="Describe what you need and let qualified freelancers come to you."
         actionLabel="Post a Job"
-        actionTo="/sign-up"
+        actionTo="/jobs/new"
       />
       <BestClientMatches />
       <CallToAction />

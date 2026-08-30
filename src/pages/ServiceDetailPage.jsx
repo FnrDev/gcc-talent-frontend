@@ -2,21 +2,17 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  StarIcon,
-  Clock01Icon,
-  RefreshIcon,
-  Location01Icon,
   CheckmarkCircle02Icon,
-  Shield01Icon,
-  Message01Icon,
-  FlashIcon,
-  Album02Icon,
+  Clock01Icon,
+  InformationCircleIcon,
+  Location01Icon,
+  RefreshIcon,
+  StarIcon,
+  TaskDone01Icon,
 } from '@hugeicons/core-free-icons'
 
-import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -25,22 +21,24 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-
-import Gallery from '@/components/listing/Gallery'
-import SpecList from '@/components/listing/SpecList'
-import SimilarGrid from '@/components/listing/SimilarGrid'
-import GigCard from '@/components/listing/GigCard'
-import useResource from '@/components/listing/useResource'
-import PromoBanner from '@/components/landing/PromoBanner'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Footer from '@/components/landing/Footer'
-import { getGig, getSimilarGigs } from '@/services/gigService'
-import { formatCurrency } from '@/lib/format'
-import UserLink from '@/components/UserLink'
+import PromoBanner from '@/components/landing/PromoBanner'
+import Gallery from '@/components/listing/Gallery'
+import ServiceCard from '@/components/listing/ServiceCard'
+import SimilarGrid from '@/components/listing/SimilarGrid'
+import SpecList from '@/components/listing/SpecList'
+import useResource from '@/components/listing/useResource'
+import { formatCurrency, initials } from '@/lib/format'
+import { serviceArtwork } from '@/lib/serviceArtwork'
+import { getService, getSimilarServices } from '@/services/serviceService'
 
-const TRUST_ROWS = [
-  { icon: FlashIcon, label: 'Instant order — no waiting for a quote' },
-  { icon: Shield01Icon, label: 'Payment held in escrow until you approve' },
-  { icon: Message01Icon, label: '24/7 support on every order' },
+const SERVICE_NOTES = [
+  { icon: TaskDone01Icon, label: 'Package scope and features are listed before work begins' },
+  { icon: Clock01Icon, label: 'Delivery estimates are set by the freelancer' },
+  { icon: InformationCircleIcon, label: 'Ordering is not available in this release' },
 ]
 
 function DetailSkeleton() {
@@ -50,47 +48,58 @@ function DetailSkeleton() {
         <Skeleton className="h-7 w-3/4" />
         <Skeleton className="aspect-16/9 w-full rounded-xl" />
         <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-5/6" />
       </div>
       <Skeleton className="h-96 rounded-xl" />
     </div>
   )
 }
 
-function PackagePanel({ pack, gig }) {
+function PackagePanel({ pack }) {
+  const features = Array.isArray(pack.features) ? pack.features : []
+
   return (
     <div className="flex flex-col gap-4 rounded-xl p-4 ring-1 ring-foreground/10">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-heading text-2xl font-semibold text-foreground">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <Badge variant="outline">{pack.name}</Badge>
+          <h2 className="mt-2 text-base font-semibold text-foreground">{pack.title}</h2>
+        </div>
+        <span className="shrink-0 font-heading text-2xl font-semibold text-foreground">
           {formatCurrency(pack.price, pack.currency)}
         </span>
-        <Badge variant="outline">{pack.title}</Badge>
       </div>
+
+      {pack.description ? (
+        <p className="text-sm leading-relaxed text-muted-foreground">{pack.description}</p>
+      ) : null}
 
       <SpecList
         rows={[
           { icon: Clock01Icon, label: 'Delivery', value: `${pack.deliveryDays} days` },
           { icon: RefreshIcon, label: 'Revisions', value: pack.revisions },
-          { icon: Album02Icon, label: 'Category', value: gig.category?.name },
         ]}
       />
 
-      <ul className="flex flex-col gap-2">
-        {pack.features.map((feature) => (
-          <li key={feature} className="flex items-start gap-2 text-sm text-muted-foreground">
-            <HugeiconsIcon
-              icon={CheckmarkCircle02Icon}
-              strokeWidth={2}
-              className="mt-0.5 size-4 shrink-0 text-primary"
-              aria-hidden="true"
-            />
-            {feature}
-          </li>
-        ))}
-      </ul>
+      {features.length > 0 ? (
+        <ul className="flex flex-col gap-2">
+          {features.map((feature) => (
+            <li key={feature} className="flex items-start gap-2 text-sm text-muted-foreground">
+              <HugeiconsIcon
+                icon={CheckmarkCircle02Icon}
+                strokeWidth={2}
+                className="mt-0.5 size-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              {feature}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">No additional features are listed.</p>
+      )}
 
-      <Button size="lg" className="w-full">
-        Continue ({formatCurrency(pack.price, pack.currency)})
+      <Button size="lg" className="w-full" disabled>
+        Ordering coming soon
       </Button>
     </div>
   )
@@ -98,9 +107,16 @@ function PackagePanel({ pack, gig }) {
 
 function ServiceDetailPage() {
   const { id } = useParams()
-  const { data: gig, loading, error } = useResource(getGig, id, 'gig')
-  const { data: similar } = useResource(getSimilarGigs, id, 'gigs')
-  const [tier, setTier] = useState('basic')
+  const { data: service, loading, error } = useResource(getService, id, 'service')
+  const { data: similar } = useResource(getSimilarServices, id, 'services')
+  const [selectedPackageId, setSelectedPackageId] = useState(null)
+  const packageIds = service?.packages?.map((pack) => String(pack._id)) || []
+  const activePackageId = packageIds.includes(selectedPackageId)
+    ? selectedPackageId
+    : packageIds[0]
+  const seller = service?.freelancer
+  const location = [seller?.city, seller?.country].filter(Boolean).join(', ') || 'Not provided'
+  const rating = Number(service?.ratingAvg || 0)
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -114,20 +130,20 @@ function ServiceDetailPage() {
             <BreadcrumbItem>
               <BreadcrumbLink render={<Link to="/services" />}>Services</BreadcrumbLink>
             </BreadcrumbItem>
-            {gig && (
+            {service ? (
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="line-clamp-1">{gig.category?.name}</BreadcrumbPage>
+                  <BreadcrumbPage className="line-clamp-1">{service.name}</BreadcrumbPage>
                 </BreadcrumbItem>
               </>
-            )}
+            ) : null}
           </BreadcrumbList>
         </Breadcrumb>
 
-        {loading && <DetailSkeleton />}
+        {loading ? <DetailSkeleton /> : null}
 
-        {error && !loading && (
+        {error && !loading ? (
           <div className="rounded-xl p-8 text-center ring-1 ring-foreground/10">
             <h1 className="font-heading text-lg font-semibold text-foreground">Service unavailable</h1>
             <p className="mt-1 text-sm text-muted-foreground">{error}</p>
@@ -135,81 +151,74 @@ function ServiceDetailPage() {
               Back to services
             </Button>
           </div>
-        )}
+        ) : null}
 
-        {gig && !loading && (
+        {service && !loading ? (
           <>
-            <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+            <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
               <div className="flex min-w-0 flex-col gap-6">
                 <div>
-                  <h1 className="font-heading text-2xl leading-snug font-semibold text-foreground">{gig.title}</h1>
+                  <h1 className="font-heading text-2xl leading-snug font-semibold text-foreground">
+                    {service.name}
+                  </h1>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <UserLink user={gig.seller} showAvatar nameClassName="text-sm font-medium" />
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Avatar size="sm">
+                        {seller?.avatarUrl ? <AvatarImage src={seller.avatarUrl} alt="" /> : null}
+                        <AvatarFallback>{initials(seller?.name || 'Freelancer')}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {seller?.name || 'Freelancer'}
+                      </span>
+                    </span>
                     <span className="flex items-center gap-1 text-sm">
                       <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-4 text-primary" />
-                      <span className="font-medium text-foreground">{gig.ratingAvg.toFixed(1)}</span>
-                      <span className="text-muted-foreground">({gig.ratingCount} reviews)</span>
+                      <span className="font-medium text-foreground">{rating.toFixed(1)}</span>
+                      <span className="text-muted-foreground">({service.ratingCount || 0} reviews)</span>
                     </span>
-                    <span className="text-sm text-muted-foreground">{gig.ordersCompleted} orders completed</span>
                   </div>
                 </div>
 
-                <Gallery images={gig.gallery} title={gig.title} />
+                <Gallery images={[serviceArtwork(service)]} title={service.name} />
 
                 <section>
-                  <h2 className="mb-2 font-heading text-lg font-semibold text-foreground">About this service</h2>
-                  <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
-                    {gig.description.split('\n\n').map((paragraph, index) => (
-                      <p key={index}>{paragraph}</p>
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <h2 className="mb-2 font-heading text-lg font-semibold text-foreground">Skills</h2>
-                  <div className="flex flex-wrap gap-1.5">
-                    {gig.skills.map((skill) => (
-                      <Badge key={skill._id} variant="secondary">{skill.name}</Badge>
-                    ))}
-                  </div>
+                  <h2 className="mb-2 font-heading text-lg font-semibold text-foreground">
+                    Choose a package
+                  </h2>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    This service includes {service.packages.length}{' '}
+                    {service.packages.length === 1 ? 'package' : 'packages'}. Compare the scope,
+                    delivery estimate, revisions, and price before contacting the freelancer.
+                  </p>
                 </section>
               </div>
 
-              <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
-                <Tabs value={tier} onValueChange={setTier}>
-                  <TabsList className="w-full">
-                    {gig.packages.map((pack) => (
-                      <TabsTrigger key={pack.tier} value={pack.tier}>
-                        {pack.title}
+              <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
+                <Tabs value={activePackageId} onValueChange={setSelectedPackageId}>
+                  <TabsList className="h-auto w-full flex-wrap">
+                    {service.packages.map((pack) => (
+                      <TabsTrigger key={pack._id} value={String(pack._id)}>
+                        {pack.name}
                       </TabsTrigger>
                     ))}
                   </TabsList>
 
-                  {gig.packages.map((pack) => (
-                    <TabsContent key={pack.tier} value={pack.tier}>
-                      <PackagePanel pack={pack} gig={gig} />
+                  {service.packages.map((pack) => (
+                    <TabsContent key={pack._id} value={String(pack._id)}>
+                      <PackagePanel pack={pack} />
                     </TabsContent>
                   ))}
                 </Tabs>
 
                 <SpecList
                   rows={[
-                    { icon: Location01Icon, label: 'Seller located in', value: gig.seller?.country },
-                    { icon: Clock01Icon, label: 'Fastest delivery', value: `${gig.fastestDelivery} days` },
+                    { icon: Location01Icon, label: 'Freelancer location', value: location },
+                    { icon: Clock01Icon, label: 'Fastest delivery', value: `${service.fastestDelivery} days` },
                   ]}
                 />
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  nativeButton={false}
-                  render={<Link to={`/profile/${gig.seller?._id}`} />}
-                >
-                  View seller profile
-                </Button>
-
                 <ul className="flex flex-col gap-2 rounded-xl p-3 ring-1 ring-foreground/10">
-                  {TRUST_ROWS.map((row) => (
+                  {SERVICE_NOTES.map((row) => (
                     <li key={row.label} className="flex items-center gap-2 text-sm text-muted-foreground">
                       <HugeiconsIcon icon={row.icon} strokeWidth={2} className="size-4 shrink-0 text-primary" />
                       {row.label}
@@ -220,21 +229,21 @@ function ServiceDetailPage() {
             </div>
 
             <SimilarGrid
-              title="More like this"
-              items={similar ?? []}
-              renderItem={(item) => <GigCard key={item._id} gig={item} />}
+              title={`More from ${seller?.name || 'this freelancer'}`}
+              items={similar || []}
+              renderItem={(item) => <ServiceCard key={item._id} service={item} />}
               moreTo="/services"
-              moreLabel="See more"
+              moreLabel="Browse services"
             />
           </>
-        )}
+        ) : null}
       </main>
 
       <PromoBanner
-        eyebrow="For Freelancers"
-        title="Turn your skills into a service people can buy"
-        description="Package what you do best and start receiving orders from clients across the region."
-        actionLabel="Become a Seller"
+        eyebrow="For freelancers"
+        title="Turn your packages into a service"
+        description="Create clear options with prices, delivery estimates, revisions, and included features."
+        actionLabel="Join as a freelancer"
         actionTo="/sign-up"
       />
       <Footer />

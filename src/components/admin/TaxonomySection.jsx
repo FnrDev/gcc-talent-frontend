@@ -36,6 +36,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useCategories } from "@/context/CategoryContext"
 import {
   Table,
   TableBody,
@@ -163,6 +164,7 @@ function ResourceDialog({ editor, categories, onClose, onSaved, onAccessDenied }
 
 function TaxonomySection({ mode, onAccessDenied, onNotice }) {
   const isSkills = mode === "skills"
+  const { refreshCategories } = useCategories()
   const [categories, setCategories] = useState([])
   const [skills, setSkills] = useState([])
   const [searchInput, setSearchInput] = useState("")
@@ -174,6 +176,15 @@ function TaxonomySection({ mode, onAccessDenied, onNotice }) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState("")
   const dataRequestSequence = useRef(0)
+
+  const refreshPublicCategories = useCallback(async () => {
+    try {
+      await refreshCategories()
+    } catch {
+      // The admin mutation already succeeded; a public-list refresh must not
+      // turn that success into an error in this editor.
+    }
+  }, [refreshCategories])
 
   const loadData = useCallback(async () => {
     const requestId = ++dataRequestSequence.current
@@ -248,7 +259,7 @@ function TaxonomySection({ mode, onAccessDenied, onNotice }) {
       const response = await deleteAdminCategory(deleteTarget._id)
       setDeleteTarget(null)
       onNotice?.(response.message || "Category deleted.")
-      await loadData()
+      await Promise.all([loadData(), refreshPublicCategories()])
     } catch (requestError) {
       if (requestError?.response?.status === 403) {
         setDeleteTarget(null)
@@ -269,7 +280,12 @@ function TaxonomySection({ mode, onAccessDenied, onNotice }) {
 
   async function handleSaved(message) {
     onNotice?.(message)
-    await loadData()
+    if (isSkills) {
+      await loadData()
+      return
+    }
+
+    await Promise.all([loadData(), refreshPublicCategories()])
   }
 
   const items = isSkills ? skills : visibleCategories

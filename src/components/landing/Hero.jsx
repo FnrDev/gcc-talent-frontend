@@ -10,8 +10,10 @@ import {
 } from '@hugeicons/core-free-icons'
 
 import { Button } from '@/components/ui/button'
-import useCategories from '@/components/listing/useCategories'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useCategories } from '@/context/CategoryContext'
 import DitheredWaves from './DitheredWaves'
+import { selectLandingCategories } from './categories'
 import { cn } from '@/lib/utils'
 
 // Same ramp CallToAction uses, so the two animated panels read as one system.
@@ -30,7 +32,8 @@ const TRUST = [
 
 function Hero() {
   const navigate = useNavigate()
-  const categories = useCategories()
+  const { categories, loading, error, refreshCategories } = useCategories()
+  const visibleCategories = selectLandingCategories(categories)
   const [query, setQuery] = useState('')
   const [target, setTarget] = useState('services')
 
@@ -135,18 +138,42 @@ function Hero() {
             </form>
           </div>
 
-          {/* Category shortcuts */}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="text-sm text-white/60">Popular:</span>
-            {categories.slice(0, 5).map((category) => (
-              <Link
-                key={category._id}
-                to={`/${target}?category=${category._id}`}
-                className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-sm text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
-              >
-                {category.name}
-              </Link>
-            ))}
+          {/* Category shortcuts. Links follow the toggle rather than always
+              pointing at /jobs, so they match what the selected tab promises. */}
+          <div className="flex min-h-8 flex-wrap items-center justify-center gap-2">
+            {loading ? (
+              Array.from({ length: 5 }, (_, index) => (
+                <Skeleton key={index} className="h-7 w-24 rounded-full bg-white/15" />
+              ))
+            ) : error ? (
+              <div role="alert" className="flex items-center gap-2 text-sm text-white/70">
+                <span>Categories are unavailable.</span>
+                <Button
+                  type="button"
+                  variant="link"
+                  size="xs"
+                  className="text-white underline"
+                  onClick={refreshCategories}
+                >
+                  Try again
+                </Button>
+              </div>
+            ) : visibleCategories.length === 0 ? (
+              <p className="text-sm text-white/70">No categories are available yet.</p>
+            ) : (
+              <>
+                <span className="text-sm text-white/60">Popular:</span>
+                {visibleCategories.map((category) => (
+                  <Link
+                    key={category._id || category.slug || category.name}
+                    to={`/${target}?category=${encodeURIComponent(category._id)}`}
+                    className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-sm text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
+                  >
+                    {category.name}
+                  </Link>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Trust strip */}

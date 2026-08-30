@@ -2,14 +2,14 @@ import { Link } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import GigCard from '@/components/listing/GigCard'
+import ServiceCard from '@/components/listing/ServiceCard'
 import useListingPreview from '@/components/listing/useListingPreview'
-import { getGigs } from '@/services/gigService'
+import { getServices } from '@/services/serviceService'
 
-const PARAMS = { sort: 'recommended', limit: 3 }
+const PARAMS = { sort: 'rating', limit: 3 }
 
 function FeaturedFreelancers() {
-  const { items, loading } = useListingPreview(getGigs, PARAMS, 'gigs')
+  const { items, loading } = useListingPreview(getServices, PARAMS, 'services')
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-8">
@@ -25,7 +25,9 @@ function FeaturedFreelancers() {
           ? Array.from({ length: 3 }, (_, index) => (
               <Skeleton key={index} className="h-80 rounded-xl" />
             ))
-          : items.map((gig) => <GigCard key={gig._id} gig={gig} />)}
+          : items.length > 0
+            ? items.map((service) => <ServiceCard key={service._id} service={service} />)
+            : <p className="col-span-full py-8 text-center text-sm text-muted-foreground">No featured services yet.</p>}
       </div>
     </section>
   )

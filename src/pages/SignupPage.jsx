@@ -187,6 +187,12 @@ function SignupPage() {
               </Button>
             </FieldGroup>
           </form>
+          <p className="mt-5 text-center text-xs leading-6 text-muted-foreground">
+            By creating an account, you agree to our{' '}
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">Terms of Service<span className="sr-only"> (opens in a new tab)</span></Link>
+            . Learn how we handle your information in our{' '}
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">Privacy Policy<span className="sr-only"> (opens in a new tab)</span></Link>.
+          </p>
         </CardContent>
 
         <CardFooter className="justify-center text-sm text-muted-foreground">

@@ -1,72 +1,106 @@
-// MOCK DATA — this module is the only seam between the Jobs pages and the API.
-// The back-end endpoints already exist (GET /jobs, GET /jobs/:id); when you are
-// ready to use them, replace each function body with the commented api call.
-// The params accepted and the shapes returned here are already what the real
-// endpoints accept and return, so no component needs to change.
-// import api from './api'
+import api from './api'
 
-import { jobs } from './mock/jobs'
-import { byNewest, delay, matchesSearch, paginate, parsePaging } from './mock/query'
+async function getCategories() {
+  const response = await api.get('/categories', {
+    params: { limit: 100 },
+  })
 
-const JOB_SORTS = {
-  newest: byNewest,
-  oldest: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
-  budget_high: (a, b) => (b.budgetMax ?? b.budgetMin ?? 0) - (a.budgetMax ?? a.budgetMin ?? 0),
-  budget_low: (a, b) => (a.budgetMin ?? a.budgetMax ?? 0) - (b.budgetMin ?? b.budgetMax ?? 0),
-  proposals_low: (a, b) => a.proposalsCount - b.proposalsCount,
+  return response.data.data.categories
 }
 
-// GET /jobs — filters mirror the query params job.controller.js accepts:
-// category, skill, search, budgetType, experienceLevel, page, limit.
+async function getSkills(category) {
+  const response = await api.get('/skills', {
+    params: { category },
+  })
+
+  return response.data.skills
+}
+
+async function createJob(job) {
+  const response = await api.post('/jobs', job)
+
+  return response.data.data.job
+}
+
+async function publishJob(jobId) {
+  const response = await api.post(`/jobs/my/${jobId}/publish`)
+
+  return response.data.data.job
+}
+
 async function getJobs(params = {}) {
-  // return (await api.get('/jobs', { params })).data
-  await delay()
+  const response = await api.get('/jobs', { params })
 
-  const { category, skill, search, budgetType, experienceLevel, sort = 'newest' } = params
-  const paging = parsePaging(params)
-
-  const filtered = jobs
-    .filter((job) => (category ? job.category?._id === category : true))
-    .filter((job) => (skill ? job.skills.some((s) => s._id === skill) : true))
-    .filter((job) => (budgetType ? job.budgetType === budgetType : true))
-    .filter((job) => (experienceLevel ? job.experienceLevel === experienceLevel : true))
-    .filter((job) => matchesSearch(job, search, job.skills.map((s) => s.name)))
-    .sort(JOB_SORTS[sort] ?? byNewest)
-
-  const { items, pagination } = paginate(filtered, paging)
-
-  return { success: true, data: { jobs: items, pagination } }
+  return response.data.data
 }
 
-// GET /jobs/:id
-async function getJob(id) {
-  // return (await api.get(`/jobs/${id}`)).data
-  await delay()
+async function getJob(jobId) {
+  const response = await api.get(`/jobs/${jobId}`)
 
-  const job = jobs.find((item) => item._id === id)
-
-  if (!job) {
-    const error = new Error('Job not found.')
-    error.status = 404
-    throw error
-  }
-
-  return { success: true, data: { job } }
+  return response.data.data.job
 }
 
-// GET /jobs/:id/similar — not yet implemented server-side; same category,
-// excluding the job itself, newest first.
-async function getSimilarJobs(id, limit = 6) {
-  // return (await api.get(`/jobs/${id}/similar`, { params: { limit } })).data
-  await delay(120)
+async function getMyJobs(params = {}) {
+  const response = await api.get('/jobs/my/list', { params })
 
-  const job = jobs.find((item) => item._id === id)
-  const similar = jobs
-    .filter((item) => item._id !== id && item.category?._id === job?.category?._id)
-    .sort(byNewest)
-    .slice(0, limit)
-
-  return { success: true, data: { jobs: similar } }
+  return response.data.data
 }
 
-export { getJobs, getJob, getSimilarJobs }
+async function getMyJob(jobId) {
+  const response = await api.get(`/jobs/my/${jobId}`)
+
+  return response.data.data.job
+}
+
+async function submitProposal(jobId, payload) {
+  const response = await api.post(`/jobs/${jobId}/proposals`, payload)
+
+  return response.data.data.proposal
+}
+
+async function getMyProposals(params = {}) {
+  const response = await api.get('/proposals/mine', { params })
+
+  return response.data.data
+}
+
+async function getMyProposalForJob(jobId) {
+  const response = await api.get(`/proposals/mine/${jobId}`)
+
+  return response.data.data.proposal
+}
+
+async function getJobProposals(jobId, params = {}) {
+  const response = await api.get(`/jobs/${jobId}/proposals`, { params })
+
+  return response.data.data
+}
+
+async function updateProposalStatus(proposalId, payload) {
+  const response = await api.patch(`/proposals/${proposalId}/status`, payload)
+
+  return response.data.data.proposal
+}
+
+async function acceptProposal(proposalId) {
+  const response = await api.post(`/proposals/${proposalId}/accept`)
+
+  return response.data.data
+}
+
+export {
+  getCategories,
+  getSkills,
+  createJob,
+  publishJob,
+  getJobs,
+  getJob,
+  getMyJobs,
+  getMyJob,
+  submitProposal,
+  getMyProposals,
+  getMyProposalForJob,
+  getJobProposals,
+  updateProposalStatus,
+  acceptProposal,
+}

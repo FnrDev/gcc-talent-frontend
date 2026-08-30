@@ -8,6 +8,7 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import AdminSidebar from "@/components/admin/AdminSidebar"
+import AuditLogsSection from "@/components/admin/AuditLogsSection"
 import OverviewSection from "@/components/admin/OverviewSection"
 import TaxonomySection from "@/components/admin/TaxonomySection"
 import UsersSection from "@/components/admin/UsersSection"
@@ -18,13 +19,14 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuth } from "@/context/AuthContext"
 
-const validSections = new Set(["overview", "users", "categories", "skills"])
+const validSections = new Set(["overview", "users", "categories", "skills", "audit-logs"])
 
 const sectionLabels = {
   overview: "Overview",
   users: "Users",
   categories: "Categories",
   skills: "Skills",
+  "audit-logs": "Audit logs",
 }
 
 function AdminPage() {
@@ -88,6 +90,8 @@ function AdminPage() {
         onNotice={showNotice}
       />
     )
+  } else if (activeSection === "audit-logs") {
+    content = <AuditLogsSection onAccessDenied={handleAccessDenied} />
   } else {
     content = (
       <TaxonomySection

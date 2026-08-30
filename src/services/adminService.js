@@ -19,6 +19,11 @@ async function getAdminStats() {
   return response.data
 }
 
+async function getAdminAuditLogs(params = {}) {
+  const response = await api.get('/admin/audit-logs', { params })
+  return response.data
+}
+
 async function getAdminUsers(params = {}) {
   const response = await api.get('/admin/users', { params })
   return response.data
@@ -81,6 +86,7 @@ async function deleteAdminSkill(id) {
 
 export {
   getAdminStats,
+  getAdminAuditLogs,
   getAdminUsers,
   getAdminUser,
   updateAdminUser,
