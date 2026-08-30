@@ -62,7 +62,8 @@ function Dashboard() {
         ) : user?.role === 'freelancer' ? (
           <>
             Looking for work? <Link to="/jobs" className="font-medium text-primary underline underline-offset-4">Browse jobs</Link>
-            {' '}or <Link to="/proposals" className="font-medium text-primary underline underline-offset-4">track your proposals</Link>.
+            {', '}<Link to="/services/new" className="font-medium text-primary underline underline-offset-4">create a service</Link>
+            {', or '}<Link to="/proposals" className="font-medium text-primary underline underline-offset-4">track your proposals</Link>.
           </>
         ) : null}
       </p>

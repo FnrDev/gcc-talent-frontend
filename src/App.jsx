@@ -22,6 +22,7 @@ import RoleRoute from "./components/RoleRoute";
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 const ServiceDetailPage = lazy(() => import("./pages/ServiceDetailPage"));
+const CreateServicePage = lazy(() => import("./pages/CreateServicePage"));
 
 function MarketplacePageFallback() {
   return (
@@ -92,6 +93,20 @@ function App() {
             <Suspense fallback={<MarketplacePageFallback />}>
               <ServicesPage />
             </Suspense>
+          )}
+        />
+        <Route
+          path="/services/new"
+          element={(
+            <RoleRoute
+              allowedRoles={["freelancer"]}
+              signInMessage="Sign in with a freelancer account to create a service."
+              forbiddenMessage="Only freelancer accounts can create services."
+            >
+              <Suspense fallback={<MarketplacePageFallback />}>
+                <CreateServicePage />
+              </Suspense>
+            </RoleRoute>
           )}
         />
         <Route

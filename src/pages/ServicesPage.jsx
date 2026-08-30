@@ -42,8 +42,8 @@ const PROMO = {
   eyebrow: 'For freelancers',
   title: 'Turn your packages into a service',
   description: 'Create focused packages with clear prices, delivery times, and included features.',
-  actionLabel: 'Join as a freelancer',
-  actionTo: '/sign-up',
+  actionLabel: 'Create a service',
+  actionTo: '/services/new',
 }
 
 function ServicesPage() {

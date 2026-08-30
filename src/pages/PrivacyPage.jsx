@@ -19,7 +19,7 @@ const sections = [
         <li><strong>Account details:</strong> your name, email address, account role, account status, verification information, and sign-in or recovery records. Passwords are stored as hashes, not as readable passwords.</li>
         <li><strong>Profile information:</strong> information you add, such as an avatar, location, biography, skills, languages, availability, rates, portfolio links, or company details.</li>
         <li><strong>Marketplace activity:</strong> jobs, budgets, proposals, delivery estimates, contract terms, milestones, delivery and revision notes, attachment links, ratings, and reviews.</li>
-        <li><strong>Financial records:</strong> internal wallet balances and ledger entries, including amounts, currencies, references, and transaction status. The platform does not currently collect bank-card details or process card payments.</li>
+        <li><strong>Financial and demo-checkout records:</strong> internal wallet balances, contracts, and ledger entries, including amounts, currencies, references, and transaction status. The checkout is a demonstration only: test card values are submitted transiently to determine a simulated result, no real charge is attempted, and the full card number and CVC are not stored in account, contract, or transaction records. Never enter real card details in the demo form.</li>
         <li><strong>Security and service records:</strong> sign-in times and audit records of selected actions, including account or resource identifiers, request paths, IP addresses, and timestamps.</li>
         <li><strong>Support correspondence:</strong> your email address and the information you choose to include when contacting us, such as account, privacy, or engagement questions.</li>
       </ul>
@@ -35,7 +35,7 @@ const sections = [
       <ul>
         <li>Create accounts, authenticate requests, verify email addresses, and handle password recovery.</li>
         <li>Display profiles and listings, exchange proposals, and record agreed work and delivery activity.</li>
-        <li>Maintain balances, transaction history, ratings, and contract records.</li>
+        <li>Run the demo checkout and maintain its resulting internal contract and ledger records, along with marketplace balances, transaction history, and ratings.</li>
         <li>Send account-verification, password-reset, and password-change emails.</li>
         <li>Administer accounts and investigate suspicious activity using access controls and audit records.</li>
         <li>Respond to support and privacy requests, address complaints, and meet applicable legal obligations.</li>
@@ -81,6 +81,7 @@ const sections = [
     title: 'Retention and account deletion',
     content: <>
       <p>Retention depends on the information and why it is needed. Relevant considerations include whether your account is active, whether an engagement or payment record is still needed, applicable record-keeping obligations, unresolved disputes, and security investigations.</p>
+      <p>A successful demo checkout creates internal contract and ledger records that may be retained with the related marketplace activity. Those records reflect a simulated transaction, not external payment settlement, and do not contain the full test card number or CVC.</p>
       <p>Account, marketplace, and security audit records do not expire automatically. Audit records can retain account or resource identifiers even after an account or listing is removed.</p>
       <p>To request account closure, access to your information, or deletion, email <LegalContactLink />. These requests are handled through support, not a self-service erasure or export tool. We may need to verify your identity and review records connected to active work or other users.</p>
       <p>Closing an account does not automatically erase every related record. Contract and transaction history, records needed for legal claims or obligations, and relevant security audit records may need to be retained. Where a request cannot be fully carried out, we will explain the reason and any available next steps, subject to applicable law.</p>

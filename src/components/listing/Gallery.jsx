@@ -51,7 +51,11 @@ function Gallery({ images = [], title }) {
       </div>
 
       {images.length > 1 && (
-        <div className="flex gap-2" role="tablist" aria-label={`${title} images`}>
+        <div
+          className="flex max-w-full gap-2 overflow-x-auto pb-1"
+          role="tablist"
+          aria-label={`${title} images`}
+        >
           {images.map((image, index) => (
             <button
               key={image.url + index}
@@ -61,7 +65,7 @@ function Gallery({ images = [], title }) {
               aria-label={`Image ${index + 1} of ${images.length}`}
               onClick={() => setActive(index)}
               className={cn(
-                'overflow-hidden rounded-lg ring-1 transition-all focus-visible:ring-3 focus-visible:ring-ring/50',
+                'shrink-0 overflow-hidden rounded-lg ring-1 transition-all focus-visible:ring-3 focus-visible:ring-ring/50',
                 index === active ? 'ring-2 ring-primary' : 'ring-foreground/10 hover:ring-foreground/30',
               )}
             >

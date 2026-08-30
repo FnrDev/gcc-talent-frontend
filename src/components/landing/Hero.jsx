@@ -63,11 +63,6 @@ function Hero() {
         />
 
         <div className="relative flex w-full max-w-3xl flex-col items-center gap-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm">
-            <span className="size-1.5 rounded-full bg-white" />
-            Now hiring across the GCC
-          </span>
-
           <div className="flex flex-col gap-4">
             <h1 className="text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl lg:text-6xl">
               Find the right talent, anywhere in the GCC

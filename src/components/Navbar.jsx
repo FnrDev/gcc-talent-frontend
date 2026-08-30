@@ -6,6 +6,7 @@ import {
   JobSearchIcon,
   Logout01Icon,
   FileSearchIcon,
+  PackageAddIcon,
   UserCircleIcon,
   WorkHistoryIcon,
 } from '@hugeicons/core-free-icons'
@@ -41,6 +42,7 @@ const clientLinks = [
 
 const freelancerLinks = [
   { label: 'Browse Jobs', to: '/jobs' },
+  { label: 'Create a Service', to: '/services/new', roles: ['freelancer'] },
   { label: 'My Proposals', to: '/proposals', roles: ['freelancer'] },
   { label: 'Become a Freelancer', to: '/sign-up', guestOnly: true },
   { label: 'How it Works', to: '#' },
@@ -194,6 +196,10 @@ function Navbar() {
                   <DropdownMenuItem render={<Link to="/jobs" />}>
                     <HugeiconsIcon icon={JobSearchIcon} strokeWidth={2} />
                     Browse Jobs
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<Link to="/services/new" />}>
+                    <HugeiconsIcon icon={PackageAddIcon} strokeWidth={2} />
+                    Create a Service
                   </DropdownMenuItem>
                   <DropdownMenuItem render={<Link to="/proposals" />}>
                     <HugeiconsIcon icon={FileSearchIcon} strokeWidth={2} />

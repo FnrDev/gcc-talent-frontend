@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   CheckmarkCircle02Icon,
@@ -28,17 +28,19 @@ import Footer from '@/components/landing/Footer'
 import PromoBanner from '@/components/landing/PromoBanner'
 import Gallery from '@/components/listing/Gallery'
 import ServiceCard from '@/components/listing/ServiceCard'
+import ServiceCheckoutDialog from '@/components/listing/ServiceCheckoutDialog'
 import SimilarGrid from '@/components/listing/SimilarGrid'
 import SpecList from '@/components/listing/SpecList'
 import useResource from '@/components/listing/useResource'
+import { useAuth } from '@/context/AuthContext'
 import { formatCurrency, initials } from '@/lib/format'
-import { serviceArtwork } from '@/lib/serviceArtwork'
+import { serviceGallery } from '@/lib/serviceArtwork'
 import { getService, getSimilarServices } from '@/services/serviceService'
 
 const SERVICE_NOTES = [
   { icon: TaskDone01Icon, label: 'Package scope and features are listed before work begins' },
   { icon: Clock01Icon, label: 'Delivery estimates are set by the freelancer' },
-  { icon: InformationCircleIcon, label: 'Ordering is not available in this release' },
+  { icon: InformationCircleIcon, label: 'Demo checkout uses test card details only' },
 ]
 
 function DetailSkeleton() {
@@ -54,7 +56,7 @@ function DetailSkeleton() {
   )
 }
 
-function PackagePanel({ pack }) {
+function PackagePanel({ pack, onOrder, orderLabel, orderDisabled }) {
   const features = Array.isArray(pack.features) ? pack.features : []
 
   return (
@@ -98,8 +100,14 @@ function PackagePanel({ pack }) {
         <p className="text-sm text-muted-foreground">No additional features are listed.</p>
       )}
 
-      <Button size="lg" className="w-full" disabled>
-        Ordering coming soon
+      <Button
+        type="button"
+        size="lg"
+        className="w-full"
+        onClick={() => onOrder(pack)}
+        disabled={orderDisabled}
+      >
+        {orderLabel}
       </Button>
     </div>
   )
@@ -107,9 +115,13 @@ function PackagePanel({ pack }) {
 
 function ServiceDetailPage() {
   const { id } = useParams()
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+  const routeLocation = useLocation()
   const { data: service, loading, error } = useResource(getService, id, 'service')
   const { data: similar } = useResource(getSimilarServices, id, 'services')
   const [selectedPackageId, setSelectedPackageId] = useState(null)
+  const [checkoutPackage, setCheckoutPackage] = useState(null)
   const packageIds = service?.packages?.map((pack) => String(pack._id)) || []
   const activePackageId = packageIds.includes(selectedPackageId)
     ? selectedPackageId
@@ -117,6 +129,30 @@ function ServiceDetailPage() {
   const seller = service?.freelancer
   const location = [seller?.city, seller?.country].filter(Boolean).join(', ') || 'Not provided'
   const rating = Number(service?.ratingAvg || 0)
+  const canOrder = user?.role === 'client'
+  const orderLabel = authLoading
+    ? 'Checking account…'
+    : !user
+      ? 'Sign in to order'
+      : canOrder
+        ? 'Order this package'
+        : 'Client account required'
+
+  function handleOrder(pack) {
+    if (authLoading) return
+
+    if (!user) {
+      navigate('/sign-in', {
+        state: {
+          from: `${routeLocation.pathname}${routeLocation.search}`,
+          message: 'Sign in with a client account to order this service.',
+        },
+      })
+      return
+    }
+
+    if (canOrder) setCheckoutPackage(pack)
+  }
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -179,7 +215,7 @@ function ServiceDetailPage() {
                   </div>
                 </div>
 
-                <Gallery images={[serviceArtwork(service)]} title={service.name} />
+                <Gallery images={serviceGallery(service)} title={service.name} />
 
                 <section>
                   <h2 className="mb-2 font-heading text-lg font-semibold text-foreground">
@@ -205,7 +241,12 @@ function ServiceDetailPage() {
 
                   {service.packages.map((pack) => (
                     <TabsContent key={pack._id} value={String(pack._id)}>
-                      <PackagePanel pack={pack} />
+                      <PackagePanel
+                        pack={pack}
+                        onOrder={handleOrder}
+                        orderLabel={orderLabel}
+                        orderDisabled={authLoading || (Boolean(user) && !canOrder)}
+                      />
                     </TabsContent>
                   ))}
                 </Tabs>
@@ -239,12 +280,23 @@ function ServiceDetailPage() {
         ) : null}
       </main>
 
+      {checkoutPackage ? (
+        <ServiceCheckoutDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setCheckoutPackage(null)
+          }}
+          service={service}
+          pack={checkoutPackage}
+        />
+      ) : null}
+
       <PromoBanner
         eyebrow="For freelancers"
         title="Turn your packages into a service"
         description="Create clear options with prices, delivery estimates, revisions, and included features."
-        actionLabel="Join as a freelancer"
-        actionTo="/sign-up"
+        actionLabel="Create a service"
+        actionTo="/services/new"
       />
       <Footer />
     </div>
