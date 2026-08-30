@@ -118,6 +118,10 @@ function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
+                  <NavigationMenuLink render={<Link to="/jobs" />}>Jobs</NavigationMenuLink>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
                   <NavigationMenuTrigger>For Clients</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="w-56 p-1">

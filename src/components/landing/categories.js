@@ -5,6 +5,7 @@ import {
   PenTool01Icon,
   Megaphone01Icon,
   FolderLibraryIcon,
+  SmartPhone01Icon,
 } from "@hugeicons/core-free-icons"
 
 const ICONS_BY_TOKEN = Object.freeze({
@@ -25,6 +26,9 @@ const ICONS_BY_TOKEN = Object.freeze({
   marketing: Megaphone01Icon,
   'digital-marketing': Megaphone01Icon,
   megaphone01icon: Megaphone01Icon,
+  mobile: SmartPhone01Icon,
+  'mobile-development': SmartPhone01Icon,
+  smartphone01icon: SmartPhone01Icon,
   folder: FolderLibraryIcon,
   general: FolderLibraryIcon,
   folderlibraryicon: FolderLibraryIcon,
@@ -36,6 +40,7 @@ const CATEGORY_ICON_RULES = [
   { pattern: /(^|-)(graphic|design|illustration|creative)(-|$)/, icon: PaintBrush01Icon },
   { pattern: /(^|-)(content|writing|writer|copywriting)(-|$)/, icon: PenTool01Icon },
   { pattern: /(^|-)(digital|marketing|advertising|social-media)(-|$)/, icon: Megaphone01Icon },
+  { pattern: /(^|-)(mobile|ios|android|smartphone)(-|$)/, icon: SmartPhone01Icon },
 ]
 
 function normaliseIdentifier(value) {
