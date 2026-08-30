@@ -12,7 +12,12 @@ function PopularServices() {
 
   return (
     <section id="services" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-8">
-      <h2 className="mb-4 text-lg font-semibold text-foreground">Popular services</h2>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Popular services</h2>
+        <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/services" />}>
+          Browse all services
+        </Button>
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
         {loading ? (
           Array.from({ length: 5 }, (_, index) => (

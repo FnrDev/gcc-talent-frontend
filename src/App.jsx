@@ -20,6 +20,16 @@ import AdminRoute from "./components/AdminRoute";
 import RoleRoute from "./components/RoleRoute";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
+const ServicesPage = lazy(() => import("./pages/ServicesPage"));
+const ServiceDetailPage = lazy(() => import("./pages/ServiceDetailPage"));
+
+function MarketplacePageFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
+      Loading services…
+    </div>
+  );
+}
 
 function App() {
   const location = useLocation();
@@ -76,6 +86,22 @@ function App() {
           )}
         />
         <Route path="/jobs/:id" element={<JobDetailsPage />} />
+        <Route
+          path="/services"
+          element={(
+            <Suspense fallback={<MarketplacePageFallback />}>
+              <ServicesPage />
+            </Suspense>
+          )}
+        />
+        <Route
+          path="/services/:id"
+          element={(
+            <Suspense fallback={<MarketplacePageFallback />}>
+              <ServiceDetailPage />
+            </Suspense>
+          )}
+        />
         <Route
           path="/proposals"
           element={(

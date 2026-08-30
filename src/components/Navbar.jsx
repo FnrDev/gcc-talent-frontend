@@ -34,6 +34,7 @@ import { useCategories } from '@/context/CategoryContext'
 const clientLinks = [
   { label: 'Post a Job', to: '/jobs/new', roles: ['client'], showToGuests: true },
   { label: 'My Jobs', to: '/jobs/mine', roles: ['client'] },
+  { label: 'Browse Services', to: '/services' },
   { label: 'Browse Freelancers', to: '#' },
   { label: 'How it Works', to: '#' },
 ]
@@ -110,6 +111,10 @@ function Navbar() {
                       ))}
                     </ul>
                   </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <NavigationMenuLink render={<Link to="/services" />}>Services</NavigationMenuLink>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
