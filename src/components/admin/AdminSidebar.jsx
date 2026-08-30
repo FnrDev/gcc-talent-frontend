@@ -117,7 +117,7 @@ function AdminSidebar({ activeSection, onSectionChange, user, onLogout }) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              render={<div />}
+              render={user?._id || user?.id ? <Link to={`/profile/${user._id ?? user.id}`} /> : <div />}
               className="group-data-[collapsible=icon]:justify-center"
             >
               <Avatar size="sm" className="shrink-0">

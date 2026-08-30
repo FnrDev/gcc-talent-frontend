@@ -19,22 +19,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { categories } from '@/components/landing/categories'
+import { categoryIcon } from '@/components/landing/categories'
+import useCategories from '@/components/listing/useCategories'
 
 const clientLinks = [
   { label: 'Post a Job', to: '#' },
+  { label: 'Browse Services', to: '/services' },
   { label: 'Browse Freelancers', to: '#' },
   { label: 'How it Works', to: '#' },
 ]
 
 const freelancerLinks = [
-  { label: 'Browse Jobs', to: '#' },
+  { label: 'Browse Jobs', to: '/jobs' },
   { label: 'Become a Freelancer', to: '/sign-up' },
   { label: 'How it Works', to: '#' },
 ]
 
 function Navbar() {
   const { logout, user } = useAuth()
+  const categories = useCategories()
   const avatarFallback = user?.name
     ?.split(/\s+/)
     .filter(Boolean)
@@ -59,15 +62,23 @@ function Navbar() {
                 <NavigationMenuContent>
                   <ul className="grid w-72 grid-cols-2 gap-1 p-1">
                     {categories.map((category) => (
-                      <li key={category.name}>
-                        <NavigationMenuLink render={<Link to="/#services" />}>
-                          <HugeiconsIcon icon={category.icon} strokeWidth={2} />
+                      <li key={category._id}>
+                        <NavigationMenuLink render={<Link to={`/services?category=${category._id}`} />}>
+                          <HugeiconsIcon icon={categoryIcon(category.slug)} strokeWidth={2} />
                           {category.name}
                         </NavigationMenuLink>
                       </li>
                     ))}
                   </ul>
                 </NavigationMenuContent>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <NavigationMenuLink render={<Link to="/services" />}>Services</NavigationMenuLink>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <NavigationMenuLink render={<Link to="/jobs" />}>Jobs</NavigationMenuLink>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
@@ -114,6 +125,9 @@ function Navbar() {
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem render={<Link to={`/profile/${user._id ?? user.id}`} />}>
+                My Profile
+              </DropdownMenuItem>
               <DropdownMenuItem render={<Link to="/dashboard" />}>Dashboard</DropdownMenuItem>
               {user.role === 'admin' ? (
                 <DropdownMenuItem render={<Link to="/admin" />}>Admin Panel</DropdownMenuItem>

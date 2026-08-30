@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext'
+import UserLink from '@/components/UserLink'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -24,7 +25,7 @@ function Dashboard() {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</p>
-            <p className="mt-1 font-medium">{user?.name}</p>
+            <UserLink user={user} className="mt-1" nameClassName="font-medium" />
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Email</p>

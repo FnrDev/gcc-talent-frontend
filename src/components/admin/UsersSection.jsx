@@ -1,3 +1,4 @@
+import { Link } from "react-router"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -295,7 +296,12 @@ function UserDetailSheet({
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-lg font-semibold">{detail.user.name}</h2>
+                  <Link
+                    to={`/profile/${detail.user._id}`}
+                    className="truncate text-lg font-semibold hover:text-primary hover:underline"
+                  >
+                    {detail.user.name}
+                  </Link>
                   {isSelf && <Badge variant="outline">You</Badge>}
                 </div>
                 <p className="truncate text-sm text-muted-foreground">{detail.user.email}</p>
