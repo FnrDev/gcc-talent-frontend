@@ -28,7 +28,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { categories } from '@/components/landing/categories'
+import { resolveCategoryIcon } from '@/components/landing/categories'
+import { useCategories } from '@/context/CategoryContext'
 
 const clientLinks = [
   { label: 'Post a Job', to: '/jobs/new', roles: ['client'], showToGuests: true },
@@ -52,6 +53,7 @@ function linkIsVisible(link, user) {
 
 function Navbar() {
   const { logout, user } = useAuth()
+  const { categories, loading: categoriesLoading, error: categoriesError, refreshCategories } = useCategories()
   const avatarFallback = user?.name
     ?.split(/\s+/)
     .filter(Boolean)
@@ -80,11 +82,28 @@ function Navbar() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Categories</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-72 grid-cols-2 gap-1 p-1">
-                      {categories.map((category) => (
-                        <li key={category.name}>
-                          <NavigationMenuLink render={<Link to="/#services" />}>
-                            <HugeiconsIcon icon={category.icon} strokeWidth={2} />
+                    <ul className="grid max-h-80 w-80 grid-cols-1 gap-1 overflow-y-auto p-1 sm:w-96 sm:grid-cols-2">
+                      {categoriesLoading ? (
+                        <li className="col-span-full px-3 py-4 text-sm text-muted-foreground" aria-live="polite">
+                          Loading categories…
+                        </li>
+                      ) : categoriesError ? (
+                        <li className="col-span-full flex items-center justify-between gap-3 px-3 py-2">
+                          <span className="text-sm text-muted-foreground">Categories unavailable</span>
+                          <Button type="button" size="xs" variant="ghost" onClick={refreshCategories}>
+                            Try again
+                          </Button>
+                        </li>
+                      ) : categories.length === 0 ? (
+                        <li className="col-span-full px-3 py-4 text-sm text-muted-foreground">
+                          No categories available
+                        </li>
+                      ) : categories.map((category) => (
+                        <li key={category._id || category.slug || category.name}>
+                          <NavigationMenuLink
+                            render={<Link to={`/jobs?category=${encodeURIComponent(category._id)}`} />}
+                          >
+                            <HugeiconsIcon icon={resolveCategoryIcon(category)} strokeWidth={2} />
                             {category.name}
                           </NavigationMenuLink>
                         </li>

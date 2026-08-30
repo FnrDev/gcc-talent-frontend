@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
@@ -36,6 +36,9 @@ const EMPTY_FILTERS = {
   budgetType: '',
   experienceLevel: '',
 }
+const FILTER_KEYS = Object.keys(EMPTY_FILTERS)
+const VALID_BUDGET_TYPES = new Set(['fixed', 'hourly'])
+const VALID_EXPERIENCE_LEVELS = new Set(['entry', 'intermediate', 'expert'])
 
 const BUDGET_FORMATTER = new Intl.NumberFormat('en-BH', {
   style: 'currency',
@@ -49,6 +52,45 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('en-BH', {
   month: 'short',
   year: 'numeric',
 })
+
+function sanitizeFilters(values) {
+  const search = typeof values?.search === 'string' ? values.search.trim() : ''
+  const category = typeof values?.category === 'string' ? values.category.trim() : ''
+  const budgetType = typeof values?.budgetType === 'string' ? values.budgetType.trim() : ''
+  const experienceLevel = typeof values?.experienceLevel === 'string'
+    ? values.experienceLevel.trim()
+    : ''
+
+  return {
+    search,
+    category,
+    budgetType: VALID_BUDGET_TYPES.has(budgetType) ? budgetType : '',
+    experienceLevel: VALID_EXPERIENCE_LEVELS.has(experienceLevel) ? experienceLevel : '',
+  }
+}
+
+function filtersFromSearchParams(searchParams) {
+  return sanitizeFilters({
+    search: searchParams.get('search'),
+    category: searchParams.get('category'),
+    budgetType: searchParams.get('budgetType'),
+    experienceLevel: searchParams.get('experienceLevel'),
+  })
+}
+
+function searchParamsFromFilters(filters) {
+  const searchParams = new URLSearchParams()
+
+  for (const key of FILTER_KEYS) {
+    if (filters[key]) searchParams.set(key, filters[key])
+  }
+
+  return searchParams
+}
+
+function filtersMatch(left, right) {
+  return FILTER_KEYS.every((key) => left[key] === right[key])
+}
 
 function hasAmount(value) {
   return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
@@ -201,8 +243,10 @@ function JobCardSkeleton() {
 }
 
 function JobsPage() {
-  const [filters, setFilters] = useState(EMPTY_FILTERS)
-  const [appliedFilters, setAppliedFilters] = useState(EMPTY_FILTERS)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryString = searchParams.toString()
+  const [filters, setFilters] = useState(() => filtersFromSearchParams(searchParams))
+  const [appliedFilters, setAppliedFilters] = useState(() => filtersFromSearchParams(searchParams))
   const [categories, setCategories] = useState([])
   const [jobs, setJobs] = useState([])
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 })
@@ -210,6 +254,16 @@ function JobsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const requestSequence = useRef(0)
+
+  useEffect(() => {
+    const nextFilters = filtersFromSearchParams(new URLSearchParams(queryString))
+
+    // Browser navigation is an external URL change that intentionally synchronizes page state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFilters((current) => (filtersMatch(current, nextFilters) ? current : nextFilters))
+    setAppliedFilters((current) => (filtersMatch(current, nextFilters) ? current : nextFilters))
+    setPage((current) => (current === 1 ? current : 1))
+  }, [queryString])
 
   useEffect(() => {
     let cancelled = false
@@ -273,14 +327,22 @@ function JobsPage() {
 
   function applyFilters(event) {
     event.preventDefault()
+    const nextFilters = sanitizeFilters(filters)
+    const nextSearchParams = searchParamsFromFilters(nextFilters)
+
+    setFilters((current) => (filtersMatch(current, nextFilters) ? current : nextFilters))
+    setAppliedFilters((current) => (filtersMatch(current, nextFilters) ? current : nextFilters))
     setPage(1)
-    setAppliedFilters({ ...filters })
+    if (nextSearchParams.toString() !== queryString) setSearchParams(nextSearchParams)
   }
 
   function clearFilters() {
-    setFilters(EMPTY_FILTERS)
-    setAppliedFilters(EMPTY_FILTERS)
+    const emptyFilters = { ...EMPTY_FILTERS }
+
+    setFilters(emptyFilters)
+    setAppliedFilters(emptyFilters)
     setPage(1)
+    if (queryString) setSearchParams(new URLSearchParams())
   }
 
   const filtersAreActive = Object.values(appliedFilters).some(Boolean)
