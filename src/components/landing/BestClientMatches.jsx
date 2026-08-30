@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Location01Icon } from '@hugeicons/core-free-icons'
+import { Link } from 'react-router'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -28,7 +29,7 @@ const jobs = [
 
 function BestClientMatches() {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-8">
+    <section id="jobs" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-8">
       <h2 className="mb-4 text-lg font-semibold text-foreground">Best Client Matches</h2>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -50,7 +51,9 @@ function BestClientMatches() {
                 <HugeiconsIcon icon={Location01Icon} strokeWidth={2} />
                 {job.location}
               </Badge>
-              <Button variant="outline">View Job</Button>
+              <Button variant="outline" nativeButton={false} render={<Link to="/jobs" />}>
+                Browse Jobs
+              </Button>
             </div>
           </Card>
         ))}

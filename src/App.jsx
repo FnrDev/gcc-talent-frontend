@@ -9,8 +9,15 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import Dashboard from "./pages/Dashboard";
+import CreateJobPage from "./pages/CreateJobPage";
+import JobsPage from "./pages/JobsPage";
+import JobDetailsPage from "./pages/JobDetailsPage";
+import MyJobsPage from "./pages/MyJobsPage";
+import JobProposalsPage from "./pages/JobProposalsPage";
+import MyProposalsPage from "./pages/MyProposalsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
+import RoleRoute from "./components/RoleRoute";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 
@@ -31,6 +38,56 @@ function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/jobs" element={<JobsPage />} />
+        <Route
+          path="/jobs/new"
+          element={(
+            <RoleRoute
+              allowedRoles={["client"]}
+              signInMessage="Sign in with a client account to post a job."
+              forbiddenMessage="Only client accounts can post jobs."
+            >
+              <CreateJobPage />
+            </RoleRoute>
+          )}
+        />
+        <Route
+          path="/jobs/mine"
+          element={(
+            <RoleRoute
+              allowedRoles={["client"]}
+              signInMessage="Sign in with a client account to manage your jobs."
+              forbiddenMessage="Only client accounts can manage posted jobs."
+            >
+              <MyJobsPage />
+            </RoleRoute>
+          )}
+        />
+        <Route
+          path="/jobs/:id/proposals"
+          element={(
+            <RoleRoute
+              allowedRoles={["client"]}
+              signInMessage="Sign in with a client account to review proposals."
+              forbiddenMessage="Only client accounts can review proposals."
+            >
+              <JobProposalsPage />
+            </RoleRoute>
+          )}
+        />
+        <Route path="/jobs/:id" element={<JobDetailsPage />} />
+        <Route
+          path="/proposals"
+          element={(
+            <RoleRoute
+              allowedRoles={["freelancer"]}
+              signInMessage="Sign in with a freelancer account to view your proposals."
+              forbiddenMessage="Only freelancer accounts can view submitted proposals."
+            >
+              <MyProposalsPage />
+            </RoleRoute>
+          )}
+        />
         <Route
           path="/admin"
           element={(
