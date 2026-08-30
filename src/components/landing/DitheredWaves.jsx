@@ -130,7 +130,11 @@ const hexToRgb = (hex) => {
   return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255]
 }
 
-const DitheredWaves = ({ colors = DEFAULT_COLORS, height = '100%' }) => {
+// `fallbackClassName` paints the surface behind the canvas. It is what a
+// viewer sees when WebGL2 is unavailable (older devices, disabled GPU,
+// headless), so a caller on a light layout can supply something better than
+// the default black.
+const DitheredWaves = ({ colors = DEFAULT_COLORS, height = '100%', fallbackClassName = 'bg-black' }) => {
   const canvasRef = useRef(null)
   const colorsRef = useRef(colors)
 
@@ -181,6 +185,11 @@ const DitheredWaves = ({ colors = DEFAULT_COLORS, height = '100%' }) => {
 
     const start = performance.now()
     let raf = 0
+    // An endlessly animating shader is both a motion-sensitivity issue and a
+    // battery drain, so honour the user's preference and paint a single frame.
+    const reduceMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const render = () => {
       gl.viewport(0, 0, w, h)
       gl.uniform2f(uResolution, w, h)
@@ -190,7 +199,7 @@ const DitheredWaves = ({ colors = DEFAULT_COLORS, height = '100%' }) => {
         gl.uniform3f(uColorLocs[i], r, g, b)
       })
       gl.drawArrays(gl.TRIANGLES, 0, 3)
-      raf = requestAnimationFrame(render)
+      if (!reduceMotion) raf = requestAnimationFrame(render)
     }
     render()
 
@@ -205,7 +214,7 @@ const DitheredWaves = ({ colors = DEFAULT_COLORS, height = '100%' }) => {
   }, [])
 
   return (
-    <div className="h-full w-full bg-black" style={{ height }}>
+    <div className={`h-full w-full ${fallbackClassName}`} style={{ height }}>
       <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
   )
