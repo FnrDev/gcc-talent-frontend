@@ -10,15 +10,23 @@ import {
   InformationCircleIcon,
   Location01Icon,
   Money03Icon,
+  PlusSignIcon,
+  Delete02Icon,
   UserIcon,
 } from '@hugeicons/core-free-icons'
 import { useAuth } from '@/context/AuthContext'
-import { getJob, getMyProposalForJob, submitProposal } from '@/services/jobService'
+import {
+  getJob,
+  getMyProposalForJob,
+  getSimilarJobs,
+  submitProposal,
+  uploadProposalAttachment,
+} from '@/services/jobService'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import UserLink from '@/components/UserLink'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
@@ -43,6 +51,12 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('en-BH', {
   month: 'long',
   year: 'numeric',
 })
+
+const minimumMilestoneDate = (() => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return tomorrow.toISOString().slice(0, 10)
+})()
 
 function hasAmount(value) {
   return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
@@ -72,16 +86,6 @@ function deadlineHasPassed(value) {
   if (!value) return false
   const timestamp = new Date(value).getTime()
   return Number.isFinite(timestamp) && timestamp <= Date.now()
-}
-
-function avatarFallback(name) {
-  return name
-    ?.split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || 'GT'
 }
 
 function getRequestError(error, fallback) {
@@ -114,8 +118,35 @@ function DetailsSkeleton() {
   )
 }
 
+function SimilarJobCard({ job }) {
+  return (
+    <Card className="gap-0 py-0 shadow-sm">
+      <CardContent className="p-5">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant="secondary">{job.category?.name || 'General'}</Badge>
+          <span>{formatDate(job.createdAt, 'Recently posted')}</span>
+        </div>
+        <h3 className="mt-3 line-clamp-2 text-lg font-semibold leading-snug">
+          <Link to={`/jobs/${job._id}`} className="transition-colors hover:text-primary">
+            {job.title}
+          </Link>
+        </h3>
+        <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{job.description}</p>
+        <div className="mt-4 flex items-center justify-between gap-3 border-t pt-3">
+          <span className="text-sm font-medium">{formatBudget(job)}</span>
+          <Button size="sm" variant="outline" nativeButton={false} render={<Link to={`/jobs/${job._id}`} />}>
+            View job
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function ProposalForm({ job, onSubmitted }) {
   const [formData, setFormData] = useState({ coverLetter: '', amount: '', deliveryDays: '' })
+  const [milestones, setMilestones] = useState([])
+  const [attachmentFiles, setAttachmentFiles] = useState([])
   const [fieldErrors, setFieldErrors] = useState({})
   const [requestError, setRequestError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -127,6 +158,32 @@ function ProposalForm({ job, onSubmitted }) {
     setRequestError('')
   }
 
+  function addMilestone() {
+    if (milestones.length >= 20) return
+    setMilestones((current) => [
+      ...current,
+      { title: '', description: '', amount: '', dueDate: '' },
+    ])
+  }
+
+  function updateMilestone(index, field, value) {
+    setMilestones((current) => current.map((milestone, milestoneIndex) => (
+      milestoneIndex === index ? { ...milestone, [field]: value } : milestone
+    )))
+    setFieldErrors((current) => ({ ...current, milestones: '' }))
+  }
+
+  function removeMilestone(index) {
+    setMilestones((current) => current.filter((_, milestoneIndex) => milestoneIndex !== index))
+    setFieldErrors((current) => ({ ...current, milestones: '' }))
+  }
+
+  function handleAttachmentChange(event) {
+    const files = Array.from(event.target.files || [])
+    setAttachmentFiles(files.slice(0, 5))
+    setFieldErrors((current) => ({ ...current, attachments: '' }))
+  }
+
   function validate() {
     const errors = {}
     const amount = Number(formData.amount)
@@ -134,6 +191,8 @@ function ProposalForm({ job, onSubmitted }) {
 
     if (!formData.coverLetter.trim()) {
       errors.coverLetter = 'Write a short cover letter for the client.'
+    } else if (formData.coverLetter.trim().length > 5000) {
+      errors.coverLetter = 'Keep the cover letter to 5000 characters or fewer.'
     }
 
     if (formData.amount === '' || !Number.isFinite(amount) || amount <= 0) {
@@ -148,6 +207,28 @@ function ProposalForm({ job, onSubmitted }) {
       errors.deliveryDays = 'Enter a positive whole number of days.'
     }
 
+    if (milestones.length > 0) {
+      const invalidMilestone = milestones.some((milestone) => (
+        !milestone.title.trim() ||
+        !milestone.description.trim() ||
+        milestone.amount === '' ||
+        !Number.isFinite(Number(milestone.amount)) ||
+        Number(milestone.amount) <= 0 ||
+        (milestone.dueDate && new Date(`${milestone.dueDate}T23:59:59`).getTime() <= Date.now())
+      ))
+      const milestoneTotal = milestones.reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0)
+
+      if (invalidMilestone) {
+        errors.milestones = 'Each milestone needs a title, description, positive amount, and future due date when provided.'
+      } else if (Math.round(milestoneTotal * 100) !== Math.round(amount * 100)) {
+        errors.milestones = 'Milestone amounts must add up to your proposed amount.'
+      }
+    }
+
+    if (attachmentFiles.some((file) => file.size > 10 * 1024 * 1024)) {
+      errors.attachments = 'Each attachment must be 10 MB or smaller.'
+    }
+
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -160,10 +241,24 @@ function ProposalForm({ job, onSubmitted }) {
     setRequestError('')
 
     try {
+      const attachments = await Promise.all(attachmentFiles.map(async (file) => {
+        const uploaded = await uploadProposalAttachment(file)
+        return { url: uploaded.url, name: uploaded.name || file.name }
+      }))
+
       const proposal = await submitProposal(job._id, {
         coverLetter: formData.coverLetter.trim(),
         amount: Number(formData.amount),
         deliveryDays: Number(formData.deliveryDays),
+        milestones: milestones.map((milestone) => ({
+          title: milestone.title.trim(),
+          description: milestone.description.trim(),
+          amount: Number(milestone.amount),
+          ...(milestone.dueDate
+            ? { dueDate: new Date(`${milestone.dueDate}T23:59:59`).toISOString() }
+            : {}),
+        })),
+        attachments,
       })
       onSubmitted(proposal)
     } catch (error) {
@@ -202,6 +297,7 @@ function ProposalForm({ job, onSubmitted }) {
               placeholder="Explain how you would approach the work and why you are a strong fit."
               value={formData.coverLetter}
               onChange={handleChange}
+              maxLength={5000}
               aria-invalid={Boolean(fieldErrors.coverLetter)}
               required
             />
@@ -267,6 +363,88 @@ function ProposalForm({ job, onSubmitted }) {
             )}
           </Field>
 
+          <Field data-invalid={Boolean(fieldErrors.milestones) || undefined}>
+            <div className="flex items-center justify-between gap-3">
+              <FieldLabel>Milestones (optional)</FieldLabel>
+              <Button type="button" size="sm" variant="outline" onClick={addMilestone} disabled={milestones.length >= 20}>
+                <HugeiconsIcon icon={PlusSignIcon} />
+                Add
+              </Button>
+            </div>
+            <FieldDescription>
+              Break the project into funded stages. Their amounts must total your proposal.
+            </FieldDescription>
+            {milestones.length > 0 ? (
+              <div className="grid gap-3">
+                {milestones.map((milestone, index) => (
+                  <div key={index} className="grid gap-3 rounded-lg border bg-muted/20 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-muted-foreground">Milestone {index + 1}</span>
+                      <Button type="button" size="icon-sm" variant="ghost" onClick={() => removeMilestone(index)} aria-label={`Remove milestone ${index + 1}`}>
+                        <HugeiconsIcon icon={Delete02Icon} />
+                      </Button>
+                    </div>
+                    <Input
+                      aria-label={`Milestone ${index + 1} title`}
+                      placeholder="e.g. First design review"
+                      maxLength={200}
+                      value={milestone.title}
+                      onChange={(event) => updateMilestone(index, 'title', event.target.value)}
+                    />
+                    <Textarea
+                      aria-label={`Milestone ${index + 1} description`}
+                      className="min-h-20"
+                      placeholder="Describe what will be delivered at this stage."
+                      maxLength={2000}
+                      value={milestone.description}
+                      onChange={(event) => updateMilestone(index, 'description', event.target.value)}
+                    />
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                      <InputGroup>
+                        <InputGroupInput
+                          aria-label={`Milestone ${index + 1} amount`}
+                          type="number"
+                          min="0.001"
+                          step="0.001"
+                          placeholder="Amount"
+                          value={milestone.amount}
+                          onChange={(event) => updateMilestone(index, 'amount', event.target.value)}
+                        />
+                        <InputGroupAddon align="inline-end"><InputGroupText>BHD</InputGroupText></InputGroupAddon>
+                      </InputGroup>
+                      <Input
+                        aria-label={`Milestone ${index + 1} due date`}
+                        type="date"
+                        min={minimumMilestoneDate}
+                        value={milestone.dueDate}
+                        onChange={(event) => updateMilestone(index, 'dueDate', event.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {fieldErrors.milestones ? <FieldError>{fieldErrors.milestones}</FieldError> : null}
+          </Field>
+
+          <Field data-invalid={Boolean(fieldErrors.attachments) || undefined}>
+            <FieldLabel htmlFor="proposalAttachments">Attachments (optional)</FieldLabel>
+            <Input
+              id="proposalAttachments"
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx"
+              onChange={handleAttachmentChange}
+            />
+            <FieldDescription>Up to five files, 10 MB each.</FieldDescription>
+            {attachmentFiles.length > 0 ? (
+              <ul className="grid gap-1 text-xs text-muted-foreground">
+                {attachmentFiles.map((file) => <li key={`${file.name}-${file.size}`}>{file.name}</li>)}
+              </ul>
+            ) : null}
+            {fieldErrors.attachments ? <FieldError>{fieldErrors.attachments}</FieldError> : null}
+          </Field>
+
           <Button type="submit" size="lg" className="h-10 w-full" disabled={submitting}>
             {submitting ? (
               <>
@@ -287,20 +465,45 @@ function ProposalForm({ job, onSubmitted }) {
 }
 
 function ProposalSuccess({ proposal }) {
+  const statusContent = {
+    accepted: {
+      badge: 'Proposal accepted',
+      title: 'The client accepted your proposal',
+      description: 'Your active contract contains the agreed amount, delivery window, and milestones.',
+    },
+    declined: {
+      badge: 'Proposal declined',
+      title: 'The client chose another proposal',
+      description: proposal.declineReason || 'This proposal is no longer active.',
+    },
+    shortlisted: {
+      badge: 'Shortlisted',
+      title: 'The client shortlisted your proposal',
+      description: 'Your offer is still under consideration.',
+    },
+    withdrawn: {
+      badge: 'Proposal withdrawn',
+      title: 'You withdrew this proposal',
+      description: 'A withdrawn proposal cannot be submitted again for the same job.',
+    },
+  }[proposal.status]
+
   return (
     <Card className="border-primary/20 bg-primary/[0.03] shadow-sm ring-primary/15">
       <CardContent className="flex flex-col items-center px-6 py-8 text-center">
         <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={1.8} className="size-6" />
         </div>
-        <Badge className="mt-4" variant="secondary">Proposal sent</Badge>
-        <h2 className="mt-3 text-xl font-semibold">The client has your proposal</h2>
+        <Badge className="mt-4" variant="secondary">{statusContent?.badge || 'Proposal sent'}</Badge>
+        <h2 className="mt-3 text-xl font-semibold">{statusContent?.title || 'The client has your proposal'}</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          You proposed {BUDGET_FORMATTER.format(Number(proposal.amount))} with delivery in{' '}
-          {proposal.deliveryDays} {proposal.deliveryDays === 1 ? 'day' : 'days'}.
+          {statusContent?.description || (
+            <>You proposed {BUDGET_FORMATTER.format(Number(proposal.amount))} with delivery in{' '}
+              {proposal.deliveryDays} {proposal.deliveryDays === 1 ? 'day' : 'days'}.</>
+          )}
         </p>
-        <Button className="mt-5" variant="outline" nativeButton={false} render={<Link to="/jobs" />}>
-          Browse more jobs
+        <Button className="mt-5" variant="outline" nativeButton={false} render={<Link to="/proposals" />}>
+          View my proposals
         </Button>
       </CardContent>
     </Card>
@@ -391,14 +594,16 @@ function JobDetailsPage() {
   const jobId = routeParams.jobId || routeParams.id
   const { user, loading: authLoading } = useAuth()
   const [job, setJob] = useState(null)
+  const [similarJobs, setSimilarJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [submittedProposal, setSubmittedProposal] = useState(null)
   const [proposalLookup, setProposalLookup] = useState({
     jobId: null,
     loading: true,
     proposal: null,
+    error: '',
   })
+  const [proposalLookupAttempt, setProposalLookupAttempt] = useState(0)
   const requestSequence = useRef(0)
 
   const loadJob = useCallback(async () => {
@@ -407,12 +612,17 @@ function JobDetailsPage() {
     setError('')
 
     try {
-      const result = await getJob(jobId)
+      const [result, relatedJobs] = await Promise.all([
+        getJob(jobId),
+        getSimilarJobs(jobId, { limit: 3 }).catch(() => []),
+      ])
       if (requestId !== requestSequence.current) return
       setJob(result)
+      setSimilarJobs(relatedJobs)
     } catch (requestError) {
       if (requestId !== requestSequence.current) return
       setJob(null)
+      setSimilarJobs([])
       setError(getRequestError(requestError, 'We could not load this job. Please try again.'))
     } finally {
       if (requestId === requestSequence.current) setLoading(false)
@@ -437,11 +647,19 @@ function JobDetailsPage() {
       try {
         const proposal = await getMyProposalForJob(jobId)
         if (!cancelled) {
-          setProposalLookup({ jobId, loading: false, proposal })
+          setProposalLookup({ jobId, loading: false, proposal, error: '' })
         }
-      } catch {
+      } catch (requestError) {
         if (!cancelled) {
-          setProposalLookup({ jobId, loading: false, proposal: null })
+          const isMissing = requestError?.response?.status === 404
+          setProposalLookup({
+            jobId,
+            loading: false,
+            proposal: null,
+            error: isMissing
+              ? ''
+              : getRequestError(requestError, 'We could not check your existing proposal. Please try again.'),
+          })
         }
       }
     }
@@ -451,11 +669,10 @@ function JobDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [authLoading, jobId, user?.role])
+  }, [authLoading, jobId, proposalLookupAttempt, user?.role])
 
   function handleProposalSubmitted(proposal) {
-    setSubmittedProposal(proposal)
-    setProposalLookup({ jobId, loading: false, proposal })
+    setProposalLookup({ jobId, loading: false, proposal, error: '' })
     setJob((current) => current
       ? { ...current, proposalsCount: (current.proposalsCount || 0) + 1 }
       : current)
@@ -490,7 +707,7 @@ function JobDetailsPage() {
   const clientId = job.client?._id || job.client
   const isOwner = Boolean(user?._id && clientId && String(user._id) === String(clientId))
   const isFreelancer = user?.role === 'freelancer'
-  const existingProposal = submittedProposal || proposalLookup.proposal
+  const existingProposal = proposalLookup.jobId === jobId ? proposalLookup.proposal : null
   const proposalLookupPending = isFreelancer && (
     proposalLookup.jobId !== jobId || proposalLookup.loading
   )
@@ -510,14 +727,6 @@ function JobDetailsPage() {
           Back to jobs
         </Link>
 
-        {existingProposal ? (
-          <Alert className="mb-6 border-primary/20 bg-primary/[0.03]">
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="text-primary" />
-            <AlertTitle>Proposal submitted successfully</AlertTitle>
-            <AlertDescription>The client can now review your offer.</AlertDescription>
-          </Alert>
-        ) : null}
-
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
           <article className="min-w-0">
             <Card className="gap-0 py-0 shadow-sm">
@@ -534,13 +743,14 @@ function JobDetailsPage() {
                     {job.title}
                   </h1>
                   <div className="mt-4 flex items-center gap-3">
-                    <Avatar>
-                      {job.client?.avatarUrl ? <AvatarImage src={job.client.avatarUrl} alt="" /> : null}
-                      <AvatarFallback>{avatarFallback(job.client?.name)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{job.client?.name || 'GCC Talents client'}</p>
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <UserLink
+                        user={job.client}
+                        showAvatar
+                        avatarSize="default"
+                        nameClassName="text-sm font-medium text-foreground"
+                      />
+                      <p className="flex items-center gap-1 pl-10 text-xs text-muted-foreground">
                         {clientLocation ? (
                           <>
                             <HugeiconsIcon icon={Location01Icon} strokeWidth={2} className="size-3" />
@@ -603,7 +813,7 @@ function JobDetailsPage() {
                   </section>
                 ) : null}
 
-                <section className="mt-8 grid gap-4 border-t pt-7 sm:grid-cols-2">
+                <section className="mt-8 grid gap-4 border-t pt-7 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="flex gap-3">
                     <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="mt-0.5 size-5 shrink-0 text-primary" />
                     <div>
@@ -621,6 +831,17 @@ function JobDetailsPage() {
                         {job.client?.ratingCount
                           ? `${Number(job.client.ratingAvg || 0).toFixed(1)} from ${job.client.ratingCount} ${job.client.ratingCount === 1 ? 'review' : 'reviews'}`
                           : 'New client — no reviews yet'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <div>
+                      <h2 className="text-sm font-medium">Client history</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {job.client?.jobsPosted || 0} {(job.client?.jobsPosted || 0) === 1 ? 'job posted' : 'jobs posted'}
+                        {' · '}
+                        {job.client?.isEmailVerified ? 'Email verified' : 'Email not verified'}
                       </p>
                     </div>
                   </div>
@@ -651,6 +872,18 @@ function JobDetailsPage() {
           <aside className="lg:sticky lg:top-20">
             {authLoading || proposalLookupPending ? (
               <Skeleton className="h-96 rounded-xl" />
+            ) : isFreelancer && proposalLookup.error ? (
+              <Card className="shadow-sm">
+                <CardHeader className="border-b">
+                  <CardTitle className="text-lg">Could not check proposal status</CardTitle>
+                  <p className="text-sm leading-5 text-muted-foreground">{proposalLookup.error}</p>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full" variant="outline" onClick={() => setProposalLookupAttempt((attempt) => attempt + 1)}>
+                    Try again
+                  </Button>
+                </CardContent>
+              </Card>
             ) : existingProposal ? (
               <ProposalSuccess proposal={existingProposal} />
             ) : isFreelancer && proposalDeadlinePassed ? (
@@ -666,6 +899,23 @@ function JobDetailsPage() {
             </p>
           </aside>
         </div>
+
+        {similarJobs.length ? (
+          <section className="mt-10" aria-labelledby="similar-jobs-heading">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <h2 id="similar-jobs-heading" className="text-2xl font-semibold tracking-tight">Similar jobs</h2>
+                <p className="mt-1 text-sm text-muted-foreground">More open work in {job.category?.name || 'this category'}.</p>
+              </div>
+              <Button variant="ghost" nativeButton={false} render={<Link to={`/jobs?category=${encodeURIComponent(job.category?._id || '')}`} />}>
+                See all
+              </Button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {similarJobs.map((similarJob) => <SimilarJobCard key={similarJob._id} job={similarJob} />)}
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   )

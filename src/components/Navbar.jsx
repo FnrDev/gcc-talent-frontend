@@ -1,13 +1,18 @@
 import { Link } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
+  Agreement01Icon,
   Briefcase02Icon,
   DashboardSquare01Icon,
+  Edit02Icon,
   JobSearchIcon,
   Logout01Icon,
   FileSearchIcon,
   PackageAddIcon,
+  PackageCheckIcon,
+  Search01Icon,
   UserCircleIcon,
+  Wallet02Icon,
   WorkHistoryIcon,
 } from '@hugeicons/core-free-icons'
 import { useAuth } from '../context/AuthContext'
@@ -35,17 +40,22 @@ import { useCategories } from '@/context/CategoryContext'
 const clientLinks = [
   { label: 'Post a Job', to: '/jobs/new', roles: ['client'], showToGuests: true },
   { label: 'My Jobs', to: '/jobs/mine', roles: ['client'] },
+  { label: 'My Orders', to: '/orders', roles: ['client'] },
+  { label: 'My Contracts', to: '/contracts', roles: ['client'] },
+  { label: 'Wallet', to: '/wallet', roles: ['client'] },
   { label: 'Browse Services', to: '/services' },
-  { label: 'Browse Freelancers', to: '#' },
-  { label: 'How it Works', to: '#' },
+  { label: 'Browse Freelancers', to: '/search?type=freelancers' },
+  { label: 'How it Works', to: '/#how-it-works' },
 ]
 
 const freelancerLinks = [
   { label: 'Browse Jobs', to: '/jobs' },
   { label: 'Create a Service', to: '/services/new', roles: ['freelancer'] },
   { label: 'My Proposals', to: '/proposals', roles: ['freelancer'] },
+  { label: 'My Contracts', to: '/contracts', roles: ['freelancer'] },
+  { label: 'Wallet', to: '/wallet', roles: ['freelancer'] },
   { label: 'Become a Freelancer', to: '/sign-up', guestOnly: true },
-  { label: 'How it Works', to: '#' },
+  { label: 'How it Works', to: '/#how-it-works' },
 ]
 
 function linkIsVisible(link, user) {
@@ -157,8 +167,19 @@ function Navbar() {
           </div>
         </div>
 
-        {user ? (
-          <DropdownMenu>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            nativeButton={false}
+            render={<Link to="/search" aria-label="Search the marketplace" />}
+          >
+            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+            <span className="sr-only">Search the marketplace</span>
+          </Button>
+
+          {user ? (
+            <DropdownMenu>
             <DropdownMenuTrigger
               className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               aria-label={`Open account menu for ${user.name}`}
@@ -175,10 +196,34 @@ function Navbar() {
                 <span className="mt-1 block font-normal text-muted-foreground">{roleLabel}</span>
               </div>
               <DropdownMenuSeparator />
+              {user.role === 'client' || user.role === 'freelancer' ? (
+                <>
+                  <DropdownMenuItem render={<Link to={`/profile/${user._id}`} />}>
+                    <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} />
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<Link to="/profile/edit" />}>
+                    <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} />
+                    Edit Profile
+                  </DropdownMenuItem>
+                </>
+              ) : null}
               <DropdownMenuItem render={<Link to="/dashboard" />}>
                 <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />
                 Dashboard
               </DropdownMenuItem>
+              {user.role === 'client' || user.role === 'freelancer' ? (
+                <>
+                  <DropdownMenuItem render={<Link to="/contracts" />}>
+                    <HugeiconsIcon icon={Agreement01Icon} strokeWidth={2} />
+                    My Contracts
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<Link to="/wallet" />}>
+                    <HugeiconsIcon icon={Wallet02Icon} strokeWidth={2} />
+                    Wallet
+                  </DropdownMenuItem>
+                </>
+              ) : null}
               {user.role === 'client' ? (
                 <>
                   <DropdownMenuItem render={<Link to="/jobs/new" />}>
@@ -188,6 +233,10 @@ function Navbar() {
                   <DropdownMenuItem render={<Link to="/jobs/mine" />}>
                     <HugeiconsIcon icon={WorkHistoryIcon} strokeWidth={2} />
                     My Jobs
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<Link to="/orders" />}>
+                    <HugeiconsIcon icon={PackageCheckIcon} strokeWidth={2} />
+                    My Orders
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -219,17 +268,18 @@ function Navbar() {
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" nativeButton={false} render={<Link to="/sign-in" />}>
-              Sign In
-            </Button>
-            <Button nativeButton={false} render={<Link to="/sign-up" />}>
-              Join
-            </Button>
-          </div>
-        )}
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" nativeButton={false} render={<Link to="/sign-in" />}>
+                Sign In
+              </Button>
+              <Button nativeButton={false} render={<Link to="/sign-up" />}>
+                Join
+              </Button>
+            </div>
+          )}
+        </div>
       </nav>
     </header>
   )

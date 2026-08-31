@@ -40,6 +40,12 @@ async function getJob(jobId) {
   return response.data.data.job
 }
 
+async function getSimilarJobs(jobId, params = {}) {
+  const response = await api.get(`/jobs/${jobId}/similar`, { params })
+
+  return response.data.data.jobs
+}
+
 async function getMyJobs(params = {}) {
   const response = await api.get('/jobs/my/list', { params })
 
@@ -52,10 +58,41 @@ async function getMyJob(jobId) {
   return response.data.data.job
 }
 
+async function updateMyJob(jobId, payload) {
+  const response = await api.patch(`/jobs/my/${jobId}`, payload)
+
+  return response.data.data.job
+}
+
+async function closeJob(jobId) {
+  const response = await api.post(`/jobs/my/${jobId}/close`)
+
+  return response.data.data.job
+}
+
+async function reopenJob(jobId) {
+  const response = await api.post(`/jobs/my/${jobId}/reopen`)
+
+  return response.data.data.job
+}
+
+async function deleteMyJob(jobId) {
+  await api.delete(`/jobs/my/${jobId}`)
+}
+
 async function submitProposal(jobId, payload) {
   const response = await api.post(`/jobs/${jobId}/proposals`, payload)
 
   return response.data.data.proposal
+}
+
+async function uploadProposalAttachment(file) {
+  const formData = new FormData()
+  formData.append('attachment', file)
+
+  const response = await api.post('/uploads', formData)
+
+  return response.data.data.attachment
 }
 
 async function getMyProposals(params = {}) {
@@ -66,6 +103,18 @@ async function getMyProposals(params = {}) {
 
 async function getMyProposalForJob(jobId) {
   const response = await api.get(`/proposals/mine/${jobId}`)
+
+  return response.data.data.proposal
+}
+
+async function updateProposal(proposalId, payload) {
+  const response = await api.patch(`/proposals/${proposalId}`, payload)
+
+  return response.data.data.proposal
+}
+
+async function withdrawProposal(proposalId) {
+  const response = await api.post(`/proposals/${proposalId}/withdraw`)
 
   return response.data.data.proposal
 }
@@ -95,11 +144,19 @@ export {
   publishJob,
   getJobs,
   getJob,
+  getSimilarJobs,
   getMyJobs,
   getMyJob,
+  updateMyJob,
+  closeJob,
+  reopenJob,
+  deleteMyJob,
   submitProposal,
+  uploadProposalAttachment,
   getMyProposals,
   getMyProposalForJob,
+  updateProposal,
+  withdrawProposal,
   getJobProposals,
   updateProposalStatus,
   acceptProposal,

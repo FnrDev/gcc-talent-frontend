@@ -18,13 +18,11 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { createPackage, createService, uploadServiceImage } from '@/services/serviceService'
 
-const CURRENCIES = ['BHD', 'USD', 'SAR', 'AED']
 const IMAGE_TYPES = new Set(['image/gif', 'image/jpeg', 'image/png', 'image/webp'])
 const IMAGE_ACCEPT = Array.from(IMAGE_TYPES).join(',')
 const MAX_SERVICE_IMAGES = 5
@@ -334,18 +332,15 @@ function PackageEditor({
 
           <Field>
             <FieldLabel htmlFor={`${definition.key}-currency`}>Currency</FieldLabel>
-            <NativeSelect
+            <Input
               id={`${definition.key}-currency`}
               name="currency"
               value={tier.currency}
-              onChange={(event) => onChange(definition.key, event)}
+              readOnly
+              aria-readonly="true"
               disabled={disabled}
-              className="w-full"
-            >
-              {CURRENCIES.map((currency) => (
-                <NativeSelectOption key={currency} value={currency}>{currency}</NativeSelectOption>
-              ))}
-            </NativeSelect>
+            />
+            <FieldDescription>All marketplace payments use Bahraini dinar.</FieldDescription>
           </Field>
 
           <Field data-invalid={Boolean(deliveryError)}>

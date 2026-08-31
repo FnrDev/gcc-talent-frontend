@@ -19,10 +19,10 @@ import {
   updateProposalStatus,
 } from '@/services/jobService'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import UserLink from '@/components/UserLink'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
@@ -35,6 +35,16 @@ const BHD_FORMATTER = new Intl.NumberFormat('en-BH', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 3,
 })
+
+function formatHourlyRate(value, currency = 'BHD') {
+  const safeCurrency = ['BHD', 'SAR', 'AED', 'USD'].includes(currency) ? currency : 'BHD'
+  return new Intl.NumberFormat('en-BH', {
+    style: 'currency',
+    currency: safeCurrency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(Number(value) || 0)
+}
 
 function getRequestError(error, fallback) {
   return error?.response?.data?.message || error?.response?.data?.err || fallback
@@ -113,16 +123,6 @@ function statusVariant(status) {
   return 'outline'
 }
 
-function initials(name) {
-  return (name || 'Freelancer')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-}
-
 function LoadingState() {
   return (
     <div className="space-y-5" aria-label="Loading job proposals">
@@ -162,8 +162,10 @@ function JobProposalsPage() {
   const [declineTarget, setDeclineTarget] = useState('')
   const [declineReason, setDeclineReason] = useState('')
   const [acceptTarget, setAcceptTarget] = useState('')
+  const loadSequence = useRef(0)
 
   const loadPage = useCallback(async () => {
+    const requestId = ++loadSequence.current
     setLoading(true)
     setError('')
 
@@ -176,6 +178,7 @@ function JobProposalsPage() {
           ...(status ? { status } : {}),
         }),
       ])
+      if (requestId !== loadSequence.current) return null
       const normalizedProposals = normalizeProposals(proposalsResult)
 
       setJob(normalizeJob(jobResult))
@@ -183,10 +186,11 @@ function JobProposalsPage() {
       setPagination(normalizedProposals.pagination)
       return normalizedProposals
     } catch (requestError) {
+      if (requestId !== loadSequence.current) return null
       setError(getRequestError(requestError, 'We could not load this job or its proposals.'))
       return null
     } finally {
-      setLoading(false)
+      if (requestId === loadSequence.current) setLoading(false)
     }
   }, [jobId, page, status])
 
@@ -194,6 +198,9 @@ function JobProposalsPage() {
     // Loading remote page data is the external synchronization handled by this effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPage()
+    return () => {
+      loadSequence.current += 1
+    }
   }, [loadPage])
 
   function updateLocalProposal(proposalId, update) {
@@ -437,32 +444,35 @@ function JobProposalsPage() {
                         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start gap-3">
-                              <Avatar size="lg">
-                                {freelancer.avatarUrl ? <AvatarImage src={freelancer.avatarUrl} alt={freelancer.name || 'Freelancer'} /> : null}
-                                <AvatarFallback>{initials(freelancer.name)}</AvatarFallback>
-                              </Avatar>
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <h3 className="truncate text-base font-semibold sm:text-lg">{freelancer.name || 'Freelancer'}</h3>
+                                  <UserLink
+                                    user={freelancer}
+                                    showAvatar
+                                    avatarSize="lg"
+                                    nameClassName="text-base font-semibold text-foreground sm:text-lg"
+                                  />
                                   <Badge className="capitalize" variant={statusVariant(proposal.status)}>{proposal.status}</Badge>
                                 </div>
-                                <p className="mt-0.5 text-sm text-muted-foreground">{profile.headline || 'Independent professional'}</p>
-                                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                  {freelancer.ratingCount > 0 ? (
-                                    <span className="inline-flex items-center gap-1">
-                                      <HugeiconsIcon icon={StarIcon} className="size-3.5 text-amber-500" />
-                                      {Number(freelancer.ratingAvg || 0).toFixed(1)} ({freelancer.ratingCount})
-                                    </span>
-                                  ) : null}
-                                  {freelancer.city || freelancer.country ? (
-                                    <span className="inline-flex items-center gap-1">
-                                      <HugeiconsIcon icon={Location01Icon} className="size-3.5" />
-                                      {[freelancer.city, freelancer.country].filter(Boolean).join(', ')}
-                                    </span>
-                                  ) : null}
-                                  {profile.hourlyRate !== undefined ? (
-                                    <span>{BHD_FORMATTER.format(Number(profile.hourlyRate) || 0)}/hour</span>
-                                  ) : null}
+                                <div className="pl-12">
+                                  <p className="mt-0.5 text-sm text-muted-foreground">{profile.headline || 'Independent professional'}</p>
+                                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                    {freelancer.ratingCount > 0 ? (
+                                      <span className="inline-flex items-center gap-1">
+                                        <HugeiconsIcon icon={StarIcon} className="size-3.5 text-amber-500" />
+                                        {Number(freelancer.ratingAvg || 0).toFixed(1)} ({freelancer.ratingCount})
+                                      </span>
+                                    ) : null}
+                                    {freelancer.city || freelancer.country ? (
+                                      <span className="inline-flex items-center gap-1">
+                                        <HugeiconsIcon icon={Location01Icon} className="size-3.5" />
+                                        {[freelancer.city, freelancer.country].filter(Boolean).join(', ')}
+                                      </span>
+                                    ) : null}
+                                    {profile.hourlyRate !== undefined ? (
+                                      <span>{formatHourlyRate(profile.hourlyRate, profile.currency)}/hour</span>
+                                    ) : null}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -487,11 +497,35 @@ function JobProposalsPage() {
                                     <div key={`${milestone.title}-${index}`} className="flex items-start justify-between gap-4 text-sm">
                                       <div>
                                         <p>{milestone.title}</p>
+                                        {milestone.description ? (
+                                          <p className="mt-0.5 text-xs text-muted-foreground">{milestone.description}</p>
+                                        ) : null}
                                         {milestone.dueDate ? <p className="text-xs text-muted-foreground">Due {formatDate(milestone.dueDate)}</p> : null}
                                       </div>
                                       <span className="shrink-0 font-medium">{BHD_FORMATTER.format(milestone.amount || 0)}</span>
                                     </div>
                                   ))}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {proposal.attachments?.some((attachment) => /^https?:\/\//i.test(attachment?.url || '')) ? (
+                              <div className="mt-4 rounded-xl border p-4">
+                                <p className="text-sm font-medium">Attachments</p>
+                                <div className="mt-3 grid gap-2">
+                                  {proposal.attachments
+                                    .filter((attachment) => /^https?:\/\//i.test(attachment?.url || ''))
+                                    .map((attachment, index) => (
+                                      <a
+                                        key={`${attachment.url}-${index}`}
+                                        href={attachment.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
+                                      >
+                                        {attachment.name || `Attachment ${index + 1}`}
+                                      </a>
+                                    ))}
                                 </div>
                               </div>
                             ) : null}

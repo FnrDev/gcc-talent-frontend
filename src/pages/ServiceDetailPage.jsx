@@ -11,7 +11,6 @@ import {
   TaskDone01Icon,
 } from '@hugeicons/core-free-icons'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   Breadcrumb,
@@ -29,11 +28,13 @@ import PromoBanner from '@/components/landing/PromoBanner'
 import Gallery from '@/components/listing/Gallery'
 import ServiceCard from '@/components/listing/ServiceCard'
 import ServiceCheckoutDialog from '@/components/listing/ServiceCheckoutDialog'
+import ServiceReviews from '@/components/listing/ServiceReviews'
 import SimilarGrid from '@/components/listing/SimilarGrid'
 import SpecList from '@/components/listing/SpecList'
 import useResource from '@/components/listing/useResource'
+import UserLink from '@/components/UserLink'
 import { useAuth } from '@/context/AuthContext'
-import { formatCurrency, initials } from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
 import { serviceGallery } from '@/lib/serviceArtwork'
 import { getService, getSimilarServices } from '@/services/serviceService'
 
@@ -198,15 +199,11 @@ function ServiceDetailPage() {
                     {service.name}
                   </h1>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <Avatar size="sm">
-                        {seller?.avatarUrl ? <AvatarImage src={seller.avatarUrl} alt="" /> : null}
-                        <AvatarFallback>{initials(seller?.name || 'Freelancer')}</AvatarFallback>
-                      </Avatar>
-                      <span className="truncate text-sm font-medium text-foreground">
-                        {seller?.name || 'Freelancer'}
-                      </span>
-                    </span>
+                    <UserLink
+                      user={seller}
+                      showAvatar
+                      nameClassName="text-sm font-medium text-foreground"
+                    />
                     <span className="flex items-center gap-1 text-sm">
                       <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-4 text-primary" />
                       <span className="font-medium text-foreground">{rating.toFixed(1)}</span>
@@ -268,6 +265,8 @@ function ServiceDetailPage() {
                 </ul>
               </aside>
             </div>
+
+            <ServiceReviews key={service._id} serviceId={service._id} />
 
             <SimilarGrid
               title={`More from ${seller?.name || 'this freelancer'}`}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   CheckmarkCircle02Icon,
@@ -77,6 +78,7 @@ function fieldId(field) {
 }
 
 function ServiceCheckoutDialog({ open, onOpenChange, service, pack }) {
+  const navigate = useNavigate()
   const [form, setForm] = useState(EMPTY_FORM)
   const [fieldErrors, setFieldErrors] = useState({})
   const [requestState, setRequestState] = useState(null)
@@ -227,7 +229,16 @@ function ServiceCheckoutDialog({ open, onOpenChange, service, pack }) {
             </Alert>
 
             <DialogFooter>
-              <Button type="button" onClick={() => handleOpenChange(false)}>Done</Button>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Done</Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  handleOpenChange(false)
+                  navigate('/orders')
+                }}
+              >
+                View my orders
+              </Button>
             </DialogFooter>
           </div>
         ) : (

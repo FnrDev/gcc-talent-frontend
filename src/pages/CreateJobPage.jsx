@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Briefcase02Icon,
@@ -9,7 +9,14 @@ import {
   Money03Icon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons'
-import { createJob, getCategories, getSkills, publishJob } from '@/services/jobService'
+import {
+  createJob,
+  getCategories,
+  getMyJob,
+  getSkills,
+  publishJob,
+  updateMyJob,
+} from '@/services/jobService'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -45,6 +52,30 @@ function createEmptyForm() {
     experienceLevel: '',
     duration: '',
     deadline: '',
+  }
+}
+
+function dateInputValue(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
+
+  const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return localTime.toISOString().slice(0, 10)
+}
+
+function formFromJob(job) {
+  return {
+    title: job.title || '',
+    description: job.description || '',
+    category: job.category?._id || job.category || '',
+    skills: (job.skills || []).map((skill) => skill?._id || skill).filter(Boolean),
+    budgetType: job.budgetType || 'fixed',
+    budgetMin: job.budgetMin ?? '',
+    budgetMax: job.budgetMax ?? '',
+    experienceLevel: job.experienceLevel || '',
+    duration: job.duration || '',
+    deadline: dateInputValue(job.deadline),
   }
 }
 
@@ -94,6 +125,9 @@ function StepHeading({ number, title, description }) {
 }
 
 function CreateJobPage() {
+  const routeParams = useParams()
+  const jobId = routeParams.jobId || routeParams.id
+  const isEditing = Boolean(jobId)
   const [formData, setFormData] = useState(createEmptyForm)
   const [categories, setCategories] = useState([])
   const [skills, setSkills] = useState([])
@@ -105,7 +139,49 @@ function CreateJobPage() {
   const [submittingIntent, setSubmittingIntent] = useState('')
   const [createdResult, setCreatedResult] = useState(null)
   const [retryingPublish, setRetryingPublish] = useState(false)
+  const [jobLoading, setJobLoading] = useState(isEditing)
+  const [jobLoadError, setJobLoadError] = useState('')
+  const [editingStatus, setEditingStatus] = useState('')
   const minimumDeadline = useMemo(getTomorrowDateValue, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!isEditing) return undefined
+
+    async function loadJob() {
+      setJobLoading(true)
+      setJobLoadError('')
+
+      try {
+        const job = await getMyJob(jobId)
+
+        if (!['draft', 'open'].includes(job.status)) {
+          throw new Error('Only draft or open jobs can be edited.')
+        }
+
+        if (!cancelled) {
+          setFormData(formFromJob(job))
+          setEditingStatus(job.status)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setJobLoadError(
+            error?.response
+              ? getRequestError(error, 'We could not load this job for editing.')
+              : error.message,
+          )
+        }
+      } finally {
+        if (!cancelled) setJobLoading(false)
+      }
+    }
+
+    loadJob()
+    return () => {
+      cancelled = true
+    }
+  }, [isEditing, jobId])
 
   const loadCategories = useCallback(async () => {
     setCategoriesError('')
@@ -176,6 +252,7 @@ function CreateJobPage() {
     .filter((skill) => formData.skills.includes(skill._id))
     .map((skill) => skill.name)
   const isFormInvalid =
+    jobLoading ||
     !formData.title.trim() ||
     !formData.description.trim() ||
     !formData.category ||
@@ -225,12 +302,19 @@ function CreateJobPage() {
     }
 
     if (formData.budgetMin !== '') payload.budgetMin = Number(formData.budgetMin)
+    else if (isEditing) payload.budgetMin = null
+
     if (formData.budgetMax !== '') payload.budgetMax = Number(formData.budgetMax)
+    else if (isEditing) payload.budgetMax = null
+
     if (formData.experienceLevel) payload.experienceLevel = formData.experienceLevel
-    if (formData.duration) payload.duration = formData.duration
+    else if (isEditing) payload.experienceLevel = null
+
+    if (formData.duration || isEditing) payload.duration = formData.duration
+
     if (formData.deadline) {
       payload.deadline = new Date(`${formData.deadline}T23:59:59`).toISOString()
-    }
+    } else if (isEditing) payload.deadline = null
 
     return payload
   }
@@ -240,25 +324,32 @@ function CreateJobPage() {
 
     if (isFormInvalid) return
 
-    const intent = event.nativeEvent.submitter?.value === 'draft' ? 'draft' : 'publish'
+    const requestedIntent = event.nativeEvent.submitter?.value
+    const intent = isEditing
+      ? (requestedIntent === 'publish' ? 'publish' : 'save')
+      : (requestedIntent === 'draft' ? 'draft' : 'publish')
     setRequestError('')
     setSubmittingIntent(intent)
 
     try {
-      const createdJob = await createJob(buildPayload())
+      const savedJob = isEditing
+        ? await updateMyJob(jobId, buildPayload())
+        : await createJob(buildPayload())
 
-      if (intent === 'draft') {
-        setCreatedResult({ job: createdJob, publishError: '' })
+      if (intent === 'draft' || intent === 'save') {
+        if (isEditing) setEditingStatus(savedJob.status)
+        setCreatedResult({ job: savedJob, publishError: '' })
       } else {
         try {
-          const publishedJob = await publishJob(createdJob._id)
+          const publishedJob = await publishJob(savedJob._id)
+          if (isEditing) setEditingStatus(publishedJob.status)
           setCreatedResult({
-            job: { ...createdJob, status: publishedJob.status },
+            job: { ...savedJob, status: publishedJob.status },
             publishError: '',
           })
         } catch (error) {
           setCreatedResult({
-            job: createdJob,
+            job: savedJob,
             publishError: getRequestError(
               error,
               'Your job was saved as a draft, but it could not be published.',
@@ -269,7 +360,12 @@ function CreateJobPage() {
 
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
-      setRequestError(getRequestError(error, 'We could not create your job. Please try again.'))
+      setRequestError(getRequestError(
+        error,
+        isEditing
+          ? 'We could not save your changes. Please try again.'
+          : 'We could not create your job. Please try again.',
+      ))
     } finally {
       setSubmittingIntent('')
     }
@@ -280,6 +376,7 @@ function CreateJobPage() {
 
     try {
       const publishedJob = await publishJob(createdResult.job._id)
+      if (isEditing) setEditingStatus(publishedJob.status)
       setCreatedResult((current) => ({
         job: { ...current.job, status: publishedJob.status },
         publishError: '',
@@ -302,6 +399,36 @@ function CreateJobPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  if (jobLoading) {
+    return (
+      <main className="min-h-[calc(100vh-3.5rem)] bg-muted/30 px-4 py-12">
+        <Card className="mx-auto max-w-xl shadow-sm">
+          <CardContent className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
+            <Spinner />
+            Loading job details…
+          </CardContent>
+        </Card>
+      </main>
+    )
+  }
+
+  if (jobLoadError) {
+    return (
+      <main className="min-h-[calc(100vh-3.5rem)] bg-muted/30 px-4 py-12">
+        <Alert variant="destructive" className="mx-auto max-w-xl">
+          <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} />
+          <AlertTitle>Job cannot be edited</AlertTitle>
+          <AlertDescription className="grid gap-4">
+            <span>{jobLoadError}</span>
+            <Button variant="outline" nativeButton={false} render={<Link to="/jobs/mine" />}>
+              Back to my jobs
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </main>
+    )
+  }
+
   if (createdResult) {
     const isPublished = createdResult.job.status === 'open'
 
@@ -316,12 +443,14 @@ function CreateJobPage() {
               {isPublished ? 'Open for proposals' : 'Saved as draft'}
             </Badge>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-              {isPublished ? 'Your job is live' : 'Your draft is saved'}
+              {isEditing
+                ? (isPublished ? 'Your changes are live' : 'Your changes are saved')
+                : (isPublished ? 'Your job is live' : 'Your draft is saved')}
             </h1>
             <p className="mt-2 max-w-lg text-muted-foreground">
               <span className="font-medium text-foreground">{createdResult.job.title}</span>{' '}
               {isPublished
-                ? 'is now visible to freelancers.'
+                ? 'is now visible to freelancers with the latest details.'
                 : 'is ready for you to review and publish later.'}
             </p>
 
@@ -351,9 +480,15 @@ function CreateJobPage() {
               <Button variant={createdResult.publishError ? 'outline' : 'default'} nativeButton={false} render={<Link to="/jobs/mine" />}>
                 View my jobs
               </Button>
-              <Button variant="outline" onClick={startAnotherJob}>
-                Create another job
-              </Button>
+              {isEditing ? (
+                <Button variant="outline" onClick={() => setCreatedResult(null)}>
+                  Continue editing
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={startAnotherJob}>
+                  Create another job
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -369,11 +504,15 @@ function CreateJobPage() {
             <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <Link to="/dashboard" className="hover:text-foreground">Dashboard</Link>
               <span aria-hidden="true">/</span>
-              <span className="text-foreground">Create a job</span>
+              <span className="text-foreground">{isEditing ? 'Edit job' : 'Create a job'}</span>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Create a job</h1>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              {isEditing ? 'Edit your job' : 'Create a job'}
+            </h1>
             <p className="mt-2 max-w-2xl text-muted-foreground">
-              Tell freelancers what you need, set expectations, and choose whether to save or publish.
+              {isEditing
+                ? 'Update the scope, expertise, budget, or timing shown to freelancers.'
+                : 'Tell freelancers what you need, set expectations, and choose whether to save or publish.'}
             </p>
           </div>
           <Badge variant="outline" className="w-fit gap-1.5 px-3 py-1">
@@ -642,47 +781,91 @@ function CreateJobPage() {
                   {requestError ? (
                     <Alert variant="destructive" className="mb-4">
                       <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} />
-                      <AlertTitle>We could not create this job</AlertTitle>
+                      <AlertTitle>
+                        {isEditing ? 'We could not save this job' : 'We could not create this job'}
+                      </AlertTitle>
                       <AlertDescription>{requestError}</AlertDescription>
                     </Alert>
                   ) : null}
 
                   <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-muted-foreground">
-                      You can publish now or keep editing later from your dashboard.
+                      {isEditing
+                        ? 'Saved changes take effect immediately for an open job.'
+                        : 'You can publish now or keep editing later from your dashboard.'}
                     </p>
                     <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                      <Button
-                        type="submit"
-                        name="intent"
-                        value="draft"
-                        variant="outline"
-                        disabled={Boolean(submittingIntent) || isFormInvalid}
-                      >
-                        {submittingIntent === 'draft' ? (
-                          <>
-                            <Spinner />
-                            Saving…
-                          </>
-                        ) : (
-                          'Save draft'
-                        )}
-                      </Button>
-                      <Button
-                        type="submit"
-                        name="intent"
-                        value="publish"
-                        disabled={Boolean(submittingIntent) || isFormInvalid}
-                      >
-                        {submittingIntent === 'publish' ? (
-                          <>
-                            <Spinner />
-                            Publishing…
-                          </>
-                        ) : (
-                          'Publish job'
-                        )}
-                      </Button>
+                      {isEditing ? (
+                        <>
+                          <Button
+                            type="submit"
+                            name="intent"
+                            value="save"
+                            variant={editingStatus === 'draft' ? 'outline' : 'default'}
+                            disabled={Boolean(submittingIntent) || isFormInvalid}
+                          >
+                            {submittingIntent === 'save' ? (
+                              <>
+                                <Spinner />
+                                Saving…
+                              </>
+                            ) : (
+                              'Save changes'
+                            )}
+                          </Button>
+                          {editingStatus === 'draft' ? (
+                            <Button
+                              type="submit"
+                              name="intent"
+                              value="publish"
+                              disabled={Boolean(submittingIntent) || isFormInvalid}
+                            >
+                              {submittingIntent === 'publish' ? (
+                                <>
+                                  <Spinner />
+                                  Publishing…
+                                </>
+                              ) : (
+                                'Save and publish'
+                              )}
+                            </Button>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            type="submit"
+                            name="intent"
+                            value="draft"
+                            variant="outline"
+                            disabled={Boolean(submittingIntent) || isFormInvalid}
+                          >
+                            {submittingIntent === 'draft' ? (
+                              <>
+                                <Spinner />
+                                Saving…
+                              </>
+                            ) : (
+                              'Save draft'
+                            )}
+                          </Button>
+                          <Button
+                            type="submit"
+                            name="intent"
+                            value="publish"
+                            disabled={Boolean(submittingIntent) || isFormInvalid}
+                          >
+                            {submittingIntent === 'publish' ? (
+                              <>
+                                <Spinner />
+                                Publishing…
+                              </>
+                            ) : (
+                              'Publish job'
+                            )}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

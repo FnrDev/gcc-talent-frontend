@@ -5,18 +5,19 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Briefcase02Icon,
+  CheckmarkCircle02Icon,
   Clock01Icon,
   Location01Icon,
   Money03Icon,
   RefreshIcon,
   Search01Icon,
 } from '@hugeicons/core-free-icons'
-import { getCategories, getJobs } from '@/services/jobService'
+import { getCategories, getJobs, getSkills } from '@/services/jobService'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import UserLink from '@/components/UserLink'
 import {
   Empty,
   EmptyContent,
@@ -34,11 +35,18 @@ const EMPTY_FILTERS = {
   search: '',
   category: '',
   budgetType: '',
+  budgetMin: '',
+  budgetMax: '',
   experienceLevel: '',
+  skillIds: '',
+  datePosted: '',
+  sort: '',
 }
 const FILTER_KEYS = Object.keys(EMPTY_FILTERS)
 const VALID_BUDGET_TYPES = new Set(['fixed', 'hourly'])
 const VALID_EXPERIENCE_LEVELS = new Set(['entry', 'intermediate', 'expert'])
+const VALID_DATE_POSTED = new Set(['24h', '7d', '30d'])
+const VALID_SORTS = new Set(['budget_high', 'budget_low'])
 
 const BUDGET_FORMATTER = new Intl.NumberFormat('en-BH', {
   style: 'currency',
@@ -60,12 +68,31 @@ function sanitizeFilters(values) {
   const experienceLevel = typeof values?.experienceLevel === 'string'
     ? values.experienceLevel.trim()
     : ''
+  const budgetMin = typeof values?.budgetMin === 'string' ? values.budgetMin.trim() : ''
+  const budgetMax = typeof values?.budgetMax === 'string' ? values.budgetMax.trim() : ''
+  const skillIds = typeof values?.skillIds === 'string'
+    ? [...new Set(values.skillIds.split(',').map((value) => value.trim()).filter(Boolean))].join(',')
+    : ''
+  const datePosted = typeof values?.datePosted === 'string' ? values.datePosted.trim() : ''
+  const sort = typeof values?.sort === 'string' ? values.sort.trim() : ''
+
+  const sanitizedBudgetMin = budgetMin !== '' && Number.isFinite(Number(budgetMin)) && Number(budgetMin) >= 0
+    ? budgetMin
+    : ''
+  const sanitizedBudgetMax = budgetMax !== '' && Number.isFinite(Number(budgetMax)) && Number(budgetMax) >= 0
+    ? budgetMax
+    : ''
 
   return {
     search,
     category,
     budgetType: VALID_BUDGET_TYPES.has(budgetType) ? budgetType : '',
+    budgetMin: sanitizedBudgetMin,
+    budgetMax: sanitizedBudgetMax,
     experienceLevel: VALID_EXPERIENCE_LEVELS.has(experienceLevel) ? experienceLevel : '',
+    skillIds,
+    datePosted: VALID_DATE_POSTED.has(datePosted) ? datePosted : '',
+    sort: VALID_SORTS.has(sort) ? sort : '',
   }
 }
 
@@ -74,7 +101,12 @@ function filtersFromSearchParams(searchParams) {
     search: searchParams.get('search'),
     category: searchParams.get('category'),
     budgetType: searchParams.get('budgetType'),
+    budgetMin: searchParams.get('budgetMin'),
+    budgetMax: searchParams.get('budgetMax'),
     experienceLevel: searchParams.get('experienceLevel'),
+    skillIds: searchParams.get('skillIds'),
+    datePosted: searchParams.get('datePosted'),
+    sort: searchParams.get('sort'),
   })
 }
 
@@ -121,16 +153,6 @@ function formatPostedDate(value) {
   if (elapsedDays === 1) return 'Posted yesterday'
   if (elapsedDays < 7) return `Posted ${elapsedDays} days ago`
   return `Posted ${DATE_FORMATTER.format(new Date(timestamp))}`
-}
-
-function avatarFallback(name) {
-  return name
-    ?.split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || 'GT'
 }
 
 function JobCard({ job }) {
@@ -187,13 +209,13 @@ function JobCard({ job }) {
         ) : null}
 
         <div className="mt-5 flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Avatar size="sm">
-              {job.client?.avatarUrl ? <AvatarImage src={job.client.avatarUrl} alt="" /> : null}
-              <AvatarFallback>{avatarFallback(job.client?.name)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{job.client?.name || 'GCC Talents client'}</p>
+          <div className="min-w-0">
+            <UserLink
+              user={job.client}
+              showAvatar
+              nameClassName="text-sm font-medium text-foreground"
+            />
+            <div className="mt-1 pl-8">
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 {clientLocation ? (
                   <>
@@ -201,7 +223,14 @@ function JobCard({ job }) {
                     <span className="truncate">{clientLocation}</span>
                   </>
                 ) : (
-                  'Verified marketplace client'
+                  job.client?.isEmailVerified ? (
+                    <>
+                      <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-3 text-primary" />
+                      Email verified
+                    </>
+                  ) : (
+                    'Marketplace client'
+                  )
                 )}
               </p>
             </div>
@@ -248,6 +277,8 @@ function JobsPage() {
   const [filters, setFilters] = useState(() => filtersFromSearchParams(searchParams))
   const [appliedFilters, setAppliedFilters] = useState(() => filtersFromSearchParams(searchParams))
   const [categories, setCategories] = useState([])
+  const [skills, setSkills] = useState([])
+  const [skillsLoading, setSkillsLoading] = useState(false)
   const [jobs, setJobs] = useState([])
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 })
   const [page, setPage] = useState(1)
@@ -282,6 +313,28 @@ function JobsPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSkills() {
+      setSkillsLoading(true)
+
+      try {
+        const result = await getSkills(filters.category || undefined)
+        if (!cancelled) setSkills(result)
+      } catch {
+        if (!cancelled) setSkills([])
+      } finally {
+        if (!cancelled) setSkillsLoading(false)
+      }
+    }
+
+    loadSkills()
+    return () => {
+      cancelled = true
+    }
+  }, [filters.category])
 
   const loadJobs = useCallback(async () => {
     const requestId = ++requestSequence.current
@@ -322,7 +375,22 @@ function JobsPage() {
 
   function handleFilterChange(event) {
     const { name, value } = event.target
-    setFilters((current) => ({ ...current, [name]: value }))
+    setFilters((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === 'category' ? { skillIds: '' } : null),
+    }))
+  }
+
+  function toggleSkill(skillId) {
+    setFilters((current) => {
+      const selected = current.skillIds ? current.skillIds.split(',').filter(Boolean) : []
+      const nextSelected = selected.includes(skillId)
+        ? selected.filter((id) => id !== skillId)
+        : [...selected, skillId]
+
+      return { ...current, skillIds: nextSelected.join(',') }
+    })
   }
 
   function applyFilters(event) {
@@ -413,8 +481,37 @@ function JobsPage() {
                   </NativeSelect>
                 </label>
 
+                <fieldset className="grid gap-2">
+                  <legend className="text-sm font-medium">Skills</legend>
+                  <div className="max-h-44 overflow-y-auto rounded-lg border p-2">
+                    {skillsLoading ? (
+                      <p className="px-1 py-2 text-xs text-muted-foreground">Loading skills…</p>
+                    ) : skills.length ? (
+                      <div className="flex flex-wrap gap-1.5" aria-label="Filter by skills">
+                        {skills.map((skill) => {
+                          const selected = filters.skillIds.split(',').filter(Boolean).includes(skill._id)
+
+                          return (
+                            <button
+                              key={skill._id}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => toggleSkill(skill._id)}
+                              className="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                            >
+                              {skill.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="px-1 py-2 text-xs text-muted-foreground">No skills available.</p>
+                    )}
+                  </div>
+                </fieldset>
+
                 <label className="grid gap-1.5 text-sm font-medium">
-                  Budget
+                  Budget type
                   <NativeSelect
                     name="budgetType"
                     value={filters.budgetType}
@@ -426,6 +523,35 @@ function JobsPage() {
                     <NativeSelectOption value="hourly">Hourly rate</NativeSelectOption>
                   </NativeSelect>
                 </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Min budget
+                    <Input
+                      name="budgetMin"
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      inputMode="decimal"
+                      value={filters.budgetMin}
+                      onChange={handleFilterChange}
+                      placeholder="0"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Max budget
+                    <Input
+                      name="budgetMax"
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      inputMode="decimal"
+                      value={filters.budgetMax}
+                      onChange={handleFilterChange}
+                      placeholder="Any"
+                    />
+                  </label>
+                </div>
 
                 <label className="grid gap-1.5 text-sm font-medium">
                   Experience
@@ -439,6 +565,35 @@ function JobsPage() {
                     <NativeSelectOption value="entry">Entry level</NativeSelectOption>
                     <NativeSelectOption value="intermediate">Intermediate</NativeSelectOption>
                     <NativeSelectOption value="expert">Expert</NativeSelectOption>
+                  </NativeSelect>
+                </label>
+
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Date posted
+                  <NativeSelect
+                    name="datePosted"
+                    value={filters.datePosted}
+                    onChange={handleFilterChange}
+                    className="w-full"
+                  >
+                    <NativeSelectOption value="">Any time</NativeSelectOption>
+                    <NativeSelectOption value="24h">Past 24 hours</NativeSelectOption>
+                    <NativeSelectOption value="7d">Past 7 days</NativeSelectOption>
+                    <NativeSelectOption value="30d">Past 30 days</NativeSelectOption>
+                  </NativeSelect>
+                </label>
+
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Sort by
+                  <NativeSelect
+                    name="sort"
+                    value={filters.sort}
+                    onChange={handleFilterChange}
+                    className="w-full"
+                  >
+                    <NativeSelectOption value="">Newest first</NativeSelectOption>
+                    <NativeSelectOption value="budget_high">Budget: high to low</NativeSelectOption>
+                    <NativeSelectOption value="budget_low">Budget: low to high</NativeSelectOption>
                   </NativeSelect>
                 </label>
 

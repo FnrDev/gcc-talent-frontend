@@ -1,58 +1,65 @@
-// MOCK DATA — the back-end has GET /profile/:userId (profile.controller.js
-// getPublicProfile) but no public browse or per-user reviews wired to it yet.
-// Swap each body for the commented call once those land; the shapes here are
-// what a public profile page needs.
-// import api from './api'
+import api from './api'
 
-import { delay } from './mock/query'
-import { clients, freelancers } from './mock/users'
-import { profileFor } from './mock/profiles'
-import { getReviewsForUser } from './mock/reviews'
-import { gigs } from './mock/gigs'
-import { jobs } from './mock/jobs'
-
-function findUser(userId) {
-  return [...freelancers, ...clients].find((user) => user._id === userId) ?? null
-}
-
-// GET /profile/:userId — returns the user, their role-specific profile, the
-// work they currently have listed, and their reviews.
 async function getPublicProfile(userId) {
-  // return (await api.get(`/profile/${userId}`)).data
-  await delay()
+  const response = await api.get(`/profile/${userId}`)
 
-  const user = findUser(userId)
-  const profile = profileFor(userId)
-
-  if (!user || !profile) {
-    const error = new Error('Profile not found.')
-    error.status = 404
-    throw error
-  }
-
-  const listings =
-    profile.role === 'freelancer'
-      ? gigs.filter((gig) => gig.seller._id === userId)
-      : jobs.filter((job) => job.client._id === userId)
-
-  const reviews = getReviewsForUser(userId)
-
-  return {
-    success: true,
-    data: {
-      user,
-      profile,
-      listings,
-      reviews,
-      stats: {
-        reviewCount: user.ratingCount,
-        ratingAvg: user.ratingAvg,
-        // Shown as the "% rating" pill: the share of the maximum score.
-        ratingPercent: Math.round((user.ratingAvg / 5) * 100),
-        completed: profile.role === 'freelancer' ? profile.completedContracts : profile.jobsPosted,
-      },
-    },
-  }
+  return response.data
 }
 
-export { getPublicProfile }
+async function getMyProfile() {
+  const response = await api.get('/profile/me')
+
+  return response.data.data
+}
+
+async function updateMyProfile(payload) {
+  const response = await api.patch('/profile/me', payload)
+
+  return response.data.data
+}
+
+async function getProfileSkills() {
+  const response = await api.get('/skills')
+
+  return Array.isArray(response.data.skills) ? response.data.skills : []
+}
+
+async function uploadPortfolioImage(file) {
+  const formData = new FormData()
+  formData.append('attachment', file)
+
+  const response = await api.post('/uploads', formData, {
+    params: { purpose: 'service-image' },
+  })
+
+  return response.data.data.attachment
+}
+
+async function createPortfolioItem(payload) {
+  const response = await api.post('/profile/me/portfolio', payload)
+
+  return response.data.data.item
+}
+
+async function updatePortfolioItem(itemId, payload) {
+  const response = await api.patch(`/profile/me/portfolio/${itemId}`, payload)
+
+  return response.data.data.item
+}
+
+async function deletePortfolioItem(itemId) {
+  const response = await api.delete(`/profile/me/portfolio/${itemId}`)
+
+  return response.data
+}
+
+export {
+  getPublicProfile,
+  getMyProfile,
+  updateMyProfile,
+  getProfileSkills,
+  uploadPortfolioImage,
+  createPortfolioItem,
+  updatePortfolioItem,
+  deletePortfolioItem,
+}

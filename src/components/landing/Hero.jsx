@@ -20,8 +20,9 @@ import { cn } from '@/lib/utils'
 const WAVE_COLORS = ['#2B4447', '#3A5457', '#D9D2C6', '#F6F0EA']
 
 const TARGETS = [
-  { value: 'services', label: 'Find services', placeholder: 'Try "logo design" or "React developer"' },
-  { value: 'jobs', label: 'Find work', placeholder: 'Try "mobile app" or "content writing"' },
+  { value: 'services', label: 'Services', placeholder: 'Try "logo design" or "React developer"' },
+  { value: 'jobs', label: 'Jobs', placeholder: 'Try "mobile app" or "content writing"' },
+  { value: 'freelancers', label: 'Freelancers', placeholder: 'Try "Arabic copywriter" or "UI designer"' },
 ]
 
 const TRUST = [
@@ -42,7 +43,9 @@ function Hero() {
   const submit = (event) => {
     event.preventDefault()
     const trimmed = query.trim()
-    navigate(trimmed ? `/${target}?search=${encodeURIComponent(trimmed)}` : `/${target}`)
+    const params = new URLSearchParams({ type: target })
+    if (trimmed) params.set('query', trimmed)
+    navigate(`/search?${params.toString()}`)
   }
 
   return (
@@ -161,7 +164,9 @@ function Hero() {
                 {visibleCategories.map((category) => (
                   <Link
                     key={category._id || category.slug || category.name}
-                    to={`/${target}?category=${encodeURIComponent(category._id)}`}
+                    to={target === 'jobs'
+                      ? `/jobs?category=${encodeURIComponent(category._id)}`
+                      : `/search?type=${target}&query=${encodeURIComponent(category.name)}`}
                     className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-sm text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
                   >
                     {category.name}

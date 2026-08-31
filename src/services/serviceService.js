@@ -12,6 +12,11 @@ async function getSimilarServices(id, limit = 6) {
   return (await api.get(`/services/${id}/similar`, { params: { limit } })).data
 }
 
+async function getServiceReviews(id, { page = 1, limit = 6 } = {}) {
+  const response = await api.get(`/services/${id}/reviews`, { params: { page, limit } })
+  return response.data.data
+}
+
 async function createPackage(payload) {
   const response = await api.post('/packages', payload)
 
@@ -47,6 +52,7 @@ export {
   getServices,
   getService,
   getSimilarServices,
+  getServiceReviews,
   createPackage,
   uploadServiceImage,
   createService,

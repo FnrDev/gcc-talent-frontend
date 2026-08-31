@@ -2,10 +2,10 @@ import { Link } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Clock01Icon, StarIcon } from '@hugeicons/core-free-icons'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { formatCurrency, initials } from '@/lib/format'
+import UserLink from '@/components/UserLink'
+import { formatCurrency } from '@/lib/format'
 import { serviceArtwork } from '@/lib/serviceArtwork'
 
 function cheapestPackage(packages = []) {
@@ -35,13 +35,12 @@ function ServiceCard({ service }) {
 
       <CardContent className="flex flex-col gap-3 py-4">
         <div className="flex min-w-0 items-center gap-2">
-          <Avatar size="sm">
-            {seller?.avatarUrl ? <AvatarImage src={seller.avatarUrl} alt="" /> : null}
-            <AvatarFallback>{initials(seller?.name || 'Freelancer')}</AvatarFallback>
-          </Avatar>
-          <span className="truncate text-sm font-medium text-foreground">
-            {seller?.name || 'Freelancer'}
-          </span>
+          <UserLink
+            user={seller}
+            showAvatar
+            raised
+            nameClassName="text-sm font-medium text-foreground"
+          />
           <span className="ml-auto flex shrink-0 items-center gap-1 text-sm">
             <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-3.5 text-primary" />
             <span className="font-medium text-foreground">{rating.toFixed(1)}</span>

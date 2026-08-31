@@ -8,15 +8,28 @@ import {
   PlusSignIcon,
   UserGroupIcon,
 } from '@hugeicons/core-free-icons'
-import { getMyJobs, publishJob } from '@/services/jobService'
+import {
+  closeJob,
+  deleteMyJob,
+  getMyJobs,
+  publishJob,
+  reopenJob,
+} from '@/services/jobService'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-const JOB_STATUSES = ['draft', 'open', 'in_progress', 'completed', 'closed']
+const JOB_STATUS_TABS = [
+  { value: 'all', label: 'All' },
+  { value: 'draft', label: 'Drafts' },
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'closed', label: 'Closed' },
+]
 
 const BUDGET_FORMATTER = new Intl.NumberFormat('en-BH', {
   style: 'currency',
@@ -104,11 +117,11 @@ function LoadingJobs() {
 function MyJobsPage() {
   const [jobs, setJobs] = useState([])
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 })
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [publishingJobId, setPublishingJobId] = useState('')
+  const [pendingAction, setPendingAction] = useState('')
   const [actionError, setActionError] = useState('')
   const [actionSuccess, setActionSuccess] = useState('')
 
@@ -120,7 +133,7 @@ function MyJobsPage() {
       const result = normalizeResult(await getMyJobs({
         page,
         limit: 10,
-        ...(status ? { status } : {}),
+        ...(status !== 'all' ? { status } : {}),
       }))
       setJobs(result.jobs)
       setPagination(result.pagination)
@@ -143,24 +156,44 @@ function MyJobsPage() {
     return `${total} ${total === 1 ? 'job' : 'jobs'}`
   }, [jobs.length, pagination.total])
 
-  function handleStatusChange(event) {
-    setStatus(event.target.value)
+  function handleStatusChange(value) {
+    setStatus(value)
     setPage(1)
   }
 
-  async function handlePublish(jobId) {
-    setPublishingJobId(jobId)
+  async function handleJobAction(job, action) {
+    const confirmations = {
+      close: `Close “${job.title}”? Freelancers will no longer be able to submit proposals.`,
+      delete: `Delete the draft “${job.title}”? This cannot be undone.`,
+    }
+
+    if (confirmations[action] && !window.confirm(confirmations[action])) return
+
+    const actions = {
+      publish: () => publishJob(job._id),
+      close: () => closeJob(job._id),
+      reopen: () => reopenJob(job._id),
+      delete: () => deleteMyJob(job._id),
+    }
+    const successMessages = {
+      publish: 'Your draft is now open for proposals.',
+      close: 'The job is now closed to new proposals.',
+      reopen: 'The job is open for proposals again.',
+      delete: 'The draft was deleted.',
+    }
+
+    setPendingAction(`${action}:${job._id}`)
     setActionError('')
     setActionSuccess('')
 
     try {
-      await publishJob(jobId)
-      setActionSuccess('Your draft is now open for proposals.')
+      await actions[action]()
+      setActionSuccess(successMessages[action])
       await loadJobs()
     } catch (requestError) {
-      setActionError(getRequestError(requestError, 'We could not publish this draft. Please try again.'))
+      setActionError(getRequestError(requestError, `We could not ${action} this job. Please try again.`))
     } finally {
-      setPublishingJobId('')
+      setPendingAction('')
     }
   }
 
@@ -181,36 +214,32 @@ function MyJobsPage() {
           </Button>
         </header>
 
-        <section className="mb-5 flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+        <section className="mb-5 flex flex-col gap-3 rounded-xl border bg-card p-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
             <HugeiconsIcon icon={Briefcase02Icon} className="size-4" />
             <span>{loading ? 'Loading jobs…' : resultSummary}</span>
           </div>
-          <NativeSelect
-            className="h-9 w-full capitalize sm:w-44"
-            aria-label="Filter jobs by status"
-            value={status}
-            onChange={handleStatusChange}
-          >
-            <NativeSelectOption value="">All statuses</NativeSelectOption>
-            {JOB_STATUSES.map((jobStatus) => (
-              <NativeSelectOption key={jobStatus} value={jobStatus}>
-                {statusLabel(jobStatus)}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Tabs value={status} onValueChange={handleStatusChange}>
+            <TabsList className="h-auto w-full justify-start overflow-x-auto sm:w-fit" aria-label="Filter jobs by status">
+              {JOB_STATUS_TABS.map((tab) => (
+                <TabsTrigger key={tab.value || 'all'} value={tab.value} className="px-3 py-1.5">
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </section>
 
         {actionSuccess ? (
           <Alert className="mb-5 border-primary/20 bg-primary/5">
-            <AlertTitle>Job published</AlertTitle>
+            <AlertTitle>Job updated</AlertTitle>
             <AlertDescription>{actionSuccess}</AlertDescription>
           </Alert>
         ) : null}
 
         {actionError ? (
           <Alert variant="destructive" className="mb-5">
-            <AlertTitle>Could not publish job</AlertTitle>
+            <AlertTitle>Could not update job</AlertTitle>
             <AlertDescription>{actionError}</AlertDescription>
           </Alert>
         ) : null}
@@ -234,15 +263,15 @@ function MyJobsPage() {
                 <HugeiconsIcon icon={Briefcase02Icon} className="size-6" />
               </span>
               <h2 className="text-lg font-semibold">
-                {status ? `No ${statusLabel(status)} jobs` : 'Create your first job'}
+                {status !== 'all' ? `No ${statusLabel(status)} jobs` : 'Create your first job'}
               </h2>
               <p className="mt-1 text-muted-foreground">
-                {status
+                {status !== 'all'
                   ? 'Try another status or view all of your jobs.'
                   : 'Describe the work you need and start receiving proposals from freelancers.'}
               </p>
-              {status ? (
-                <Button className="mt-5" variant="outline" onClick={() => setStatus('')}>View all jobs</Button>
+              {status !== 'all' ? (
+                <Button className="mt-5" variant="outline" onClick={() => setStatus('all')}>View all jobs</Button>
               ) : (
                 <Button className="mt-5" nativeButton={false} render={<Link to="/jobs/new" />}>
                   <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
@@ -286,26 +315,72 @@ function MyJobsPage() {
                         <p className="font-semibold">{formatBudget(job)}</p>
                         <p className="mt-0.5 text-xs capitalize text-muted-foreground">{job.budgetType || 'fixed'} budget</p>
                       </div>
-                      {job.status === 'draft' ? (
-                        <Button
-                          className="w-full sm:w-auto"
-                          disabled={Boolean(publishingJobId)}
-                          onClick={() => handlePublish(job._id)}
-                        >
-                          {publishingJobId === job._id ? 'Publishing…' : 'Publish job'}
-                          <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
-                        </Button>
-                      ) : (
-                        <Button
-                          className="w-full sm:w-auto"
-                          variant={job.proposalsCount > 0 ? 'default' : 'outline'}
-                          nativeButton={false}
-                          render={<Link to={`/jobs/${job._id}/proposals`} />}
-                        >
-                          Review proposals
-                          <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
-                        </Button>
-                      )}
+                      <div className="flex w-full flex-wrap justify-end gap-2">
+                        {['draft', 'open'].includes(job.status) ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            nativeButton={false}
+                            render={<Link to={`/jobs/${job._id}/edit`} />}
+                          >
+                            Edit
+                          </Button>
+                        ) : null}
+
+                        {job.status === 'draft' ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={Boolean(pendingAction)}
+                              onClick={() => handleJobAction(job, 'delete')}
+                            >
+                              {pendingAction === `delete:${job._id}` ? 'Deleting…' : 'Delete'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={Boolean(pendingAction)}
+                              onClick={() => handleJobAction(job, 'publish')}
+                            >
+                              {pendingAction === `publish:${job._id}` ? 'Publishing…' : 'Publish job'}
+                              <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
+                            </Button>
+                          </>
+                        ) : null}
+
+                        {job.status === 'open' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={Boolean(pendingAction)}
+                            onClick={() => handleJobAction(job, 'close')}
+                          >
+                            {pendingAction === `close:${job._id}` ? 'Closing…' : 'Close job'}
+                          </Button>
+                        ) : null}
+
+                        {job.status === 'closed' ? (
+                          <Button
+                            size="sm"
+                            disabled={Boolean(pendingAction)}
+                            onClick={() => handleJobAction(job, 'reopen')}
+                          >
+                            {pendingAction === `reopen:${job._id}` ? 'Reopening…' : 'Reopen job'}
+                          </Button>
+                        ) : null}
+
+                        {job.status !== 'draft' ? (
+                          <Button
+                            size="sm"
+                            variant={job.proposalsCount > 0 ? 'default' : 'outline'}
+                            nativeButton={false}
+                            render={<Link to={`/jobs/${job._id}/proposals`} />}
+                          >
+                            Review proposals
+                            <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </CardContent>

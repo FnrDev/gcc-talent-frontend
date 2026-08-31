@@ -3,11 +3,9 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCategories } from '@/context/CategoryContext'
 import { resolveCategoryIcon, selectLandingCategories } from './categories'
 
-function PopularServices() {
-  const { categories, loading, error, refreshCategories } = useCategories()
+function PopularServices({ categories = [], loading = false }) {
   const visibleCategories = selectLandingCategories(categories)
 
   return (
@@ -26,13 +24,6 @@ function PopularServices() {
               <Skeleton className="h-4 w-24" />
             </Card>
           ))
-        ) : error ? (
-          <Card className="col-span-full items-center gap-2 p-6 text-center">
-            <p className="text-sm text-muted-foreground">Popular services are unavailable right now.</p>
-            <Button type="button" variant="outline" size="sm" onClick={refreshCategories}>
-              Try again
-            </Button>
-          </Card>
         ) : visibleCategories.length === 0 ? (
           <Card className="col-span-full p-6 text-center text-sm text-muted-foreground">
             No categories are available yet.
@@ -40,7 +31,7 @@ function PopularServices() {
         ) : visibleCategories.map((category) => (
           <Link
             key={category._id || category.slug || category.name}
-            to={`/jobs?category=${encodeURIComponent(category._id)}`}
+            to="/services"
             className="rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <Card className="h-full items-center gap-2 p-4 text-center transition-colors hover:ring-primary/50">
