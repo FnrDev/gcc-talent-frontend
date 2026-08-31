@@ -36,8 +36,26 @@ const AVAILABILITY_LABELS = {
   unavailable: 'Not currently available',
 }
 
+const COMPANY_SIZE_LABELS = {
+  solo: 'Self-employed',
+  '2_10': '2–10 employees',
+  '11_50': '11–50 employees',
+  '51_200': '51–200 employees',
+  '201_500': '201–500 employees',
+  '501_plus': '501+ employees',
+}
+
 function safeHttpUrl(value) {
-  return typeof value === 'string' && /^https?:\/\//i.test(value) ? value : ''
+  if (typeof value !== 'string' || !value.trim()) return ''
+
+  try {
+    const url = new URL(value.trim())
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+      ? url.toString()
+      : ''
+  } catch {
+    return ''
+  }
 }
 
 function Stars({ rating, className }) {
@@ -153,6 +171,7 @@ function ProfilePage() {
   }
 
   const isFreelancer = user.role === 'freelancer'
+  const isCompanyClient = !isFreelancer && Boolean(profile.isCompany)
   const isOwner = currentUser?._id === user._id
   const listings = Array.isArray(payload.listings) ? payload.listings : []
   const reviews = Array.isArray(payload.reviews) ? payload.reviews : []
@@ -160,18 +179,25 @@ function ProfilePage() {
   const languages = Array.isArray(profile.languages) ? profile.languages : []
   const skills = Array.isArray(profile.skills) ? profile.skills : []
   const portfolio = Array.isArray(profile.portfolio) ? profile.portfolio : []
-  const displayName = !isFreelancer && profile.companyName ? profile.companyName : user.name
-  const personName = !isFreelancer && profile.companyName ? user.name : null
+  const displayName = isCompanyClient && profile.companyName ? profile.companyName : user.name
+  const personName = isCompanyClient && profile.companyName ? user.name : null
   const location = [user.city, user.country].filter(Boolean).join(', ')
   const rating = Number(user.ratingAvg || 0)
   const reviewCount = Number(stats.reviewCount ?? user.ratingCount ?? 0)
   const activityCount = Number(stats.completed || 0)
   const about = isFreelancer ? profile.bio : profile.description
+  const companySizeLabel = COMPANY_SIZE_LABELS[profile.companySize] || ''
   const headline = isFreelancer
     ? profile.headline
-    : profile.isCompany
-      ? 'Company client'
+    : isCompanyClient
+      ? [profile.industry, companySizeLabel].filter(Boolean).join(' · ') || 'Hiring company'
       : 'Marketplace client'
+  const profileTypeLabel = isFreelancer
+    ? 'Freelancer'
+    : isCompanyClient
+      ? 'Company client'
+      : 'Client'
+  const companyUrl = safeHttpUrl(profile.website)
 
   const aboutRows = isFreelancer
     ? [
@@ -212,10 +238,38 @@ function ProfilePage() {
           label: 'Hire rate',
           value: `${Number(stats.hireRate)}%`,
         },
+        isCompanyClient && profile.industry && {
+          icon: DashboardSquare02Icon,
+          label: 'Industry',
+          value: profile.industry,
+        },
+        isCompanyClient && profile.companySize && {
+          icon: UserIcon,
+          label: 'Company size',
+          value: COMPANY_SIZE_LABELS[profile.companySize] || profile.companySize,
+        },
+        isCompanyClient
+          && profile.foundedYear !== null
+          && profile.foundedYear !== ''
+          && Number.isInteger(Number(profile.foundedYear)) && {
+          icon: Clock01Icon,
+          label: 'Founded',
+          value: Number(profile.foundedYear).toString(),
+        },
         profile.website && {
           icon: Globe02Icon,
-          label: 'Website',
-          value: profile.website,
+          label: isCompanyClient ? 'Company URL' : 'Website',
+          value: companyUrl ? (
+            <a
+              href={companyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block max-w-40 truncate align-bottom text-primary hover:underline"
+              title={profile.website}
+            >
+              {profile.website}
+            </a>
+          ) : profile.website,
         },
       ]
 
@@ -251,21 +305,35 @@ function ProfilePage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Badge variant="outline" className="capitalize">{user.role}</Badge>
+            <Badge variant="outline">{profileTypeLabel}</Badge>
             {isOwner ? <Badge variant="secondary">Your public profile</Badge> : null}
           </div>
 
-          {isOwner ? (
-            <Button
-              className="mt-4"
-              size="sm"
-              variant="outline"
-              nativeButton={false}
-              render={<Link to="/profile/edit" />}
-            >
-              <HugeiconsIcon icon={Edit02Icon} />
-              Edit profile
-            </Button>
+          {isOwner || (isCompanyClient && companyUrl) ? (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {isOwner ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link to="/profile/edit" />}
+                >
+                  <HugeiconsIcon icon={Edit02Icon} />
+                  Edit profile
+                </Button>
+              ) : null}
+              {isCompanyClient && companyUrl ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<a href={companyUrl} target="_blank" rel="noopener noreferrer" />}
+                >
+                  <HugeiconsIcon icon={Globe02Icon} />
+                  Visit company website
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
           <h1 className="mt-3 flex items-center justify-center gap-1.5 font-heading text-2xl font-semibold text-foreground">

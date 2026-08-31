@@ -40,6 +40,17 @@ const EMPTY_PORTFOLIO = {
   file: null,
 }
 
+const COMPANY_SIZE_OPTIONS = [
+  { value: 'solo', label: 'Self-employed' },
+  { value: '2_10', label: '2–10 employees' },
+  { value: '11_50', label: '11–50 employees' },
+  { value: '51_200', label: '51–200 employees' },
+  { value: '201_500', label: '201–500 employees' },
+  { value: '501_plus', label: '501+ employees' },
+]
+
+const CURRENT_YEAR = new Date().getFullYear()
+
 function getRequestError(error, fallback) {
   return error?.response?.data?.message || error?.response?.data?.err || fallback
 }
@@ -66,6 +77,9 @@ function normalizeForm(user, profile) {
     isCompany: Boolean(profile?.isCompany),
     description: profile?.description || '',
     website: profile?.website || '',
+    industry: profile?.industry || '',
+    companySize: profile?.companySize || '',
+    foundedYear: profile?.foundedYear ?? '',
     portfolio: Array.isArray(profile?.portfolio) ? profile.portfolio : [],
   }
 }
@@ -213,6 +227,9 @@ function ProfileEditPage() {
           isCompany: form.isCompany,
           description: form.description.trim(),
           website: form.website.trim(),
+          industry: form.industry.trim(),
+          companySize: form.companySize,
+          foundedYear: form.foundedYear === '' ? null : Number(form.foundedYear),
         }
 
     try {
@@ -448,7 +465,7 @@ function ProfileEditPage() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Client details</CardTitle>
+                <CardTitle>{form.isCompany ? 'Company details' : 'Client details'}</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-5">
                 <label className="flex items-center justify-between gap-4 rounded-lg border p-4">
@@ -458,17 +475,99 @@ function ProfileEditPage() {
                   </span>
                   <Switch checked={form.isCompany} onCheckedChange={(checked) => setForm((current) => ({ ...current, isCompany: checked }))} />
                 </label>
+                {form.isCompany ? (
+                  <Field>
+                    <FieldLabel htmlFor="companyName">Company name</FieldLabel>
+                    <Input
+                      id="companyName"
+                      name="companyName"
+                      value={form.companyName}
+                      onChange={updateField}
+                      maxLength={120}
+                      required
+                      placeholder="Your company name"
+                    />
+                    <FieldDescription>Required for company profiles.</FieldDescription>
+                  </Field>
+                ) : null}
+                {form.isCompany ? (
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="industry">Industry</FieldLabel>
+                      <Input
+                        id="industry"
+                        name="industry"
+                        value={form.industry}
+                        onChange={updateField}
+                        maxLength={100}
+                        placeholder="Technology, retail, healthcare…"
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="companySize">Company size</FieldLabel>
+                      <NativeSelect id="companySize" name="companySize" value={form.companySize} onChange={updateField}>
+                        <NativeSelectOption value="">Select company size</NativeSelectOption>
+                        {COMPANY_SIZE_OPTIONS.map((option) => (
+                          <NativeSelectOption key={option.value} value={option.value}>
+                            {option.label}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="foundedYear">Founded</FieldLabel>
+                      <Input
+                        id="foundedYear"
+                        name="foundedYear"
+                        type="number"
+                        min="1800"
+                        max={CURRENT_YEAR}
+                        value={form.foundedYear}
+                        onChange={updateField}
+                        placeholder="2018"
+                      />
+                      <FieldDescription>Enter the year your company was founded.</FieldDescription>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="website">Company URL</FieldLabel>
+                      <Input
+                        id="website"
+                        name="website"
+                        type="url"
+                        value={form.website}
+                        onChange={updateField}
+                        maxLength={2048}
+                        placeholder="https://example.com"
+                      />
+                    </Field>
+                  </div>
+                ) : (
+                  <Field>
+                    <FieldLabel htmlFor="website">Website (optional)</FieldLabel>
+                    <Input
+                      id="website"
+                      name="website"
+                      type="url"
+                      value={form.website}
+                      onChange={updateField}
+                      maxLength={2048}
+                      placeholder="https://example.com"
+                    />
+                  </Field>
+                )}
                 <Field>
-                  <FieldLabel htmlFor="companyName">{form.isCompany ? 'Company name' : 'Display name (optional)'}</FieldLabel>
-                  <Input id="companyName" name="companyName" value={form.companyName} onChange={updateField} />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="description">About you</FieldLabel>
-                  <Textarea id="description" name="description" className="min-h-36" value={form.description} onChange={updateField} placeholder="Describe the company, team, or kind of work you hire for." />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="website">Website</FieldLabel>
-                  <Input id="website" name="website" type="url" value={form.website} onChange={updateField} placeholder="https://example.com" />
+                  <FieldLabel htmlFor="description">{form.isCompany ? 'About the company' : 'About you'}</FieldLabel>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    className="min-h-36"
+                    value={form.description}
+                    onChange={updateField}
+                    maxLength={2000}
+                    placeholder={form.isCompany
+                      ? 'Describe your company, team, and the kind of work you hire for.'
+                      : 'Tell freelancers about you and the kind of work you hire for.'}
+                  />
                 </Field>
               </CardContent>
             </Card>
