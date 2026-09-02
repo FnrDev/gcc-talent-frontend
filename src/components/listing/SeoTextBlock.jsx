@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons'
 
@@ -8,6 +9,7 @@ import { cn } from '@/lib/utils'
 // The long-form section beneath the results in the reference layout: collapsed
 // to a few lines behind a fade, expanded on request.
 function SeoTextBlock({ title, paragraphs }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -33,7 +35,7 @@ function SeoTextBlock({ title, paragraphs }) {
 
       <div className="mt-2 flex justify-center">
         <Button variant="link" size="sm" onClick={() => setExpanded((value) => !value)}>
-          {expanded ? 'Show less' : 'Read more'}
+          {expanded ? t('common.showLess') : t('common.readMore')}
           <HugeiconsIcon
             icon={ArrowDown01Icon}
             strokeWidth={2}

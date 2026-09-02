@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { resetPassword } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 
 function ResetPasswordPage() {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuth()
@@ -67,7 +69,7 @@ function ResetPasswordPage() {
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ||
-          'We could not reset your password. Check your connection and try again.',
+          t('auth.resetFailed'),
       )
       if (requestError?.response?.data?.code === 'INVALID_RESET_TOKEN') {
         setToken('')
@@ -86,14 +88,14 @@ function ResetPasswordPage() {
         <CardHeader className="gap-2 text-center">
           <BrandLogo className="mx-auto mb-1 size-10" />
           <CardTitle className="text-2xl">
-            {resetComplete ? 'Password reset' : hasValidToken ? 'Choose a new password' : 'Request a new reset link'}
+            {resetComplete ? t('auth.passwordResetTitle') : hasValidToken ? t('auth.chooseNewPassword') : t('auth.requestNewLinkTitle')}
           </CardTitle>
           <CardDescription>
             {resetComplete
-              ? 'Your new password is ready. Sign in to continue to GCC Talents.'
+              ? t('auth.resetDoneSubtitle')
               : hasValidToken
-                ? 'Use a strong password that you do not use for another account.'
-                : 'Open the link in your reset email, or request a new one below.'}
+                ? t('auth.chooseNewSubtitle')
+                : t('auth.requestNewSubtitle')}
           </CardDescription>
         </CardHeader>
 
@@ -102,22 +104,22 @@ function ResetPasswordPage() {
             <div className="space-y-5">
               <Alert role="status">
                 <AlertDescription>
-                  Password reset successfully. Please sign in with your new password.
+                  {t('auth.resetSuccess')}
                 </AlertDescription>
               </Alert>
               <Button className="h-10 w-full" nativeButton={false} render={<Link to="/sign-in" />}>
-                Sign in
+                {t('auth.signIn')}
               </Button>
             </div>
           ) : !hasValidToken ? (
             <div className="space-y-5">
               <Alert variant="destructive">
                 <AlertDescription>
-                  {error || 'This reset link is missing or invalid. Request a new email to continue.'}
+                  {error || t('auth.invalidResetLink')}
                 </AlertDescription>
               </Alert>
               <Button className="h-10 w-full" nativeButton={false} render={<Link to="/forgot-password" />}>
-                Request a new reset link
+                {t('auth.requestNewResetLink')}
               </Button>
             </div>
           ) : (
@@ -130,7 +132,7 @@ function ResetPasswordPage() {
                 ) : null}
 
                 <Field data-invalid={passwordTooLong || undefined}>
-                  <FieldLabel htmlFor="new-password">New password</FieldLabel>
+                  <FieldLabel htmlFor="new-password">{t('auth.newPassword')}</FieldLabel>
                   <Input
                     id="new-password"
                     name="newPassword"
@@ -147,7 +149,7 @@ function ResetPasswordPage() {
                     minLength={8}
                     required
                   />
-                  <FieldDescription id="new-password-hint">Use 8 or more characters.</FieldDescription>
+                  <FieldDescription id="new-password-hint">{t('auth.passwordHint')}</FieldDescription>
                   {passwordTooLong ? (
                     <FieldError id="new-password-error">
                       This password is too long. Use at most 72 bytes; emoji and some letters use more than one byte.
@@ -156,7 +158,7 @@ function ResetPasswordPage() {
                 </Field>
 
                 <Field data-invalid={!passwordsMatch || undefined}>
-                  <FieldLabel htmlFor="confirm-password">Confirm new password</FieldLabel>
+                  <FieldLabel htmlFor="confirm-password">{t('auth.confirmNewPassword')}</FieldLabel>
                   <Input
                     id="confirm-password"
                     name="passwordConfirmation"
@@ -173,7 +175,7 @@ function ResetPasswordPage() {
                     required
                   />
                   {!passwordsMatch ? (
-                    <FieldError id="confirm-password-error">Passwords do not match.</FieldError>
+                    <FieldError id="confirm-password-error">{t('auth.passwordsDoNotMatch')}</FieldError>
                   ) : null}
                 </Field>
 
@@ -183,12 +185,12 @@ function ResetPasswordPage() {
                   className="h-10 w-full"
                   disabled={submitting || isFormInvalid}
                 >
-                  {submitting ? <><Spinner /> Resetting password…</> : 'Reset password'}
+                  {submitting ? <><Spinner /> {t('auth.resettingPassword')}</> : t('auth.resetPasswordButton')}
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
-                  Link expired?{' '}
+                  {t('auth.linkExpired')}{' '}
                   <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/forgot-password">
-                    Request a new one
+                    {t('auth.requestNewOne')}
                   </Link>
                 </p>
               </FieldGroup>
@@ -199,7 +201,7 @@ function ResetPasswordPage() {
         {!resetComplete ? (
           <CardFooter className="justify-center text-sm">
             <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/sign-in">
-              Back to sign in
+              {t('auth.backToSignIn')}
             </Link>
           </CardFooter>
         ) : null}

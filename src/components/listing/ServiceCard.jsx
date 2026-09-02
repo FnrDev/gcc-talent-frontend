@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Clock01Icon, StarIcon } from '@hugeicons/core-free-icons'
 
@@ -16,6 +17,7 @@ function cheapestPackage(packages = []) {
 }
 
 function ServiceCard({ service }) {
+  const { t } = useTranslation()
   const seller = service.freelancer
   const artwork = serviceArtwork(service)
   const startingPackage = cheapestPackage(service.packages)
@@ -41,7 +43,7 @@ function ServiceCard({ service }) {
             raised
             nameClassName="text-sm font-medium text-foreground"
           />
-          <span className="ml-auto flex shrink-0 items-center gap-1 text-sm">
+          <span className="ms-auto flex shrink-0 items-center gap-1 text-sm">
             <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-3.5 text-primary" />
             <span className="font-medium text-foreground">{rating.toFixed(1)}</span>
             <span className="text-muted-foreground">({ratingCount})</span>
@@ -57,17 +59,15 @@ function ServiceCard({ service }) {
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-3.5" />
-          <span>
-            From {service.fastestDelivery} {service.fastestDelivery === 1 ? 'day' : 'days'}
-          </span>
-          <Badge variant="outline" className="ml-auto">
-            {service.packages.length} {service.packages.length === 1 ? 'package' : 'packages'}
+          <span>{t('format.fromDays', { count: service.fastestDelivery })}</span>
+          <Badge variant="outline" className="ms-auto">
+            {t('format.packages', { count: service.packages.length })}
           </Badge>
         </div>
       </CardContent>
 
       <CardFooter className="justify-between">
-        <span className="text-xs text-muted-foreground">Starting at</span>
+        <span className="text-xs text-muted-foreground">{t('format.startingAt')}</span>
         <span className="text-base font-semibold text-foreground">
           {startingPackage ? formatCurrency(startingPackage.price, startingPackage.currency) : '—'}
         </span>

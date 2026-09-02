@@ -1,49 +1,54 @@
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import BrandLogo from '@/components/BrandLogo'
 
 const columns = [
   {
-    title: 'Product',
-    links: ['Post a Job', 'Browse Freelancers', 'Browse Services', 'Pricing', 'Enterprise'],
+    titleKey: 'footer.product',
+    links: ['links.postJob', 'links.browseFreelancers', 'links.browseServices', 'footer.pricing', 'footer.enterprise'],
   },
   {
-    title: 'Features',
-    links: ['For Clients', 'For Freelancers', 'Categories', 'Messaging', 'Payments & Escrow'],
+    titleKey: 'footer.features',
+    links: ['nav.forClients', 'nav.forFreelancers', 'nav.categories', 'footer.messaging', 'footer.payments'],
   },
   {
-    title: 'Company',
-    links: ['About', 'Careers', 'Blog', 'Press', 'Contact'],
+    titleKey: 'footer.company',
+    links: ['footer.about', 'footer.careers', 'footer.blog', 'footer.press', 'footer.contact'],
   },
   {
-    title: 'Resources',
-    links: ['Help Center', 'Guides', 'API', 'Community', 'Status'],
+    titleKey: 'footer.resources',
+    links: ['footer.helpCenter', 'footer.guides', 'footer.api', 'footer.community', 'footer.status'],
   },
   {
-    title: 'Connect',
+    // Platform names stay as they are in every language.
+    titleKey: 'footer.connect',
     links: ['X (Twitter)', 'LinkedIn', 'Instagram', 'Facebook', 'YouTube'],
+    untranslated: true,
   },
 ]
 
 const legalLinks = [
-  { label: 'Privacy Policy', to: '/privacy' },
-  { label: 'Terms of Service', to: '/terms' },
-  { label: 'Cookie Policy', to: '/privacy#cookies' },
+  { labelKey: 'footer.privacyPolicy', to: '/privacy' },
+  { labelKey: 'footer.termsOfService', to: '/terms' },
+  { labelKey: 'footer.cookiePolicy', to: '/privacy#cookies' },
 ]
 
 function Footer() {
+  const { t } = useTranslation()
+
   return (
     <footer className="rounded-t-2xl bg-muted/40">
       <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-16 lg:pl-10">
+        <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-16 lg:ps-10">
           <div className="flex items-center gap-2 lg:w-40">
             <BrandLogo className="size-7" alt="" />
-            <span className="font-semibold text-foreground">GCC Talents</span>
+            <span className="font-semibold text-foreground">{t('nav.brand')}</span>
           </div>
 
           <div className="inline-grid grid-cols-2 gap-x-12 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
             {columns.map((column) => (
-              <div key={column.title}>
-                <p className="text-sm font-medium text-foreground">{column.title}</p>
+              <div key={column.titleKey}>
+                <p className="text-sm font-medium text-foreground">{t(column.titleKey)}</p>
                 <ul className="mt-4 space-y-3">
                   {column.links.map((link) => (
                     <li key={link}>
@@ -51,7 +56,7 @@ function Footer() {
                         to="#"
                         className="text-sm text-muted-foreground hover:text-foreground"
                       >
-                        {link}
+                        {column.untranslated ? link : t(link)}
                       </Link>
                     </li>
                   ))}
@@ -68,7 +73,7 @@ function Footer() {
               to={link.to}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
-              {link.label}
+              {t(link.labelKey)}
             </Link>
           ))}
         </div>

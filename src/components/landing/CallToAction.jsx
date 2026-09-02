@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import DitheredWaves from './DitheredWaves'
 import LogoCarousel from './LogoCarousel'
@@ -11,6 +12,8 @@ const logoGroups = [
 ]
 
 function CallToAction() {
+  const { t } = useTranslation()
+
   return (
     <section className="mx-auto max-w-6xl px-4 py-8">
       <div className="relative flex min-h-[240px] flex-col items-center justify-center gap-10 overflow-hidden rounded-xl px-6 py-14 text-center">
@@ -21,7 +24,7 @@ function CallToAction() {
 
         <div className="relative flex flex-col items-center gap-4 text-white">
           <ShinyText
-            text="Ready to find the right talent?"
+            text={t('home.ctaTitle')}
             duration={2}
             delay={1}
             className="text-2xl font-normal sm:text-5xl"
@@ -33,13 +36,13 @@ function CallToAction() {
             nativeButton={false}
             render={<Link to="/sign-up" />}
           >
-            Get Started
+            {t('home.ctaButton')}
           </Button>
         </div>
 
         <div className="relative flex flex-col items-center gap-4">
           <p className="text-xs font-medium tracking-widest text-white/90 uppercase">
-            Trusted by professionals from
+            {t('home.ctaTrustedBy')}
           </p>
           <LogoCarousel groups={logoGroups} className="h-8" />
         </div>

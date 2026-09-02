@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { signIn } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 
 function SigninPage() {
+  const { t } = useTranslation()
   const { setUser } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -52,7 +54,7 @@ function SigninPage() {
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ||
-          'We could not sign you in. Check your details and try again.',
+          t('auth.signInFailed'),
       )
     } finally {
       setSubmitting(false)
@@ -64,9 +66,9 @@ function SigninPage() {
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="gap-2 text-center">
           <BrandLogo className="mx-auto mb-1 size-10" />
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardTitle className="text-2xl">{t('auth.welcomeBack')}</CardTitle>
           <CardDescription>
-            Sign in to manage your work on GCC Talents.
+            {t('auth.signInSubtitle')}
           </CardDescription>
         </CardHeader>
 
@@ -86,7 +88,7 @@ function SigninPage() {
               ) : null}
 
               <Field>
-                <FieldLabel htmlFor="email">Email address</FieldLabel>
+                <FieldLabel htmlFor="email">{t('auth.emailAddress')}</FieldLabel>
                 <Input
                   id="email"
                   name="email"
@@ -102,12 +104,12 @@ function SigninPage() {
 
               <Field>
                 <div className="flex items-center justify-between">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
+                  <FieldLabel htmlFor="password">{t('auth.password')}</FieldLabel>
                   <Link
                     className="text-xs font-medium text-foreground underline-offset-4 hover:underline"
                     to="/forgot-password"
                   >
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </Link>
                 </div>
                 <Input
@@ -131,10 +133,10 @@ function SigninPage() {
                 {submitting ? (
                   <>
                     <Spinner />
-                    Signing in…
+                    {t('auth.signingIn')}
                   </>
                 ) : (
-                  'Sign In'
+                  t('common.signIn')
                 )}
               </Button>
             </FieldGroup>
@@ -142,9 +144,9 @@ function SigninPage() {
         </CardContent>
 
         <CardFooter className="justify-center text-sm text-muted-foreground">
-          New to GCC Talents?{' '}
-          <Link className="ml-1 font-medium text-foreground underline-offset-4 hover:underline" to="/sign-up">
-            Create an account
+          {t('auth.newToPlatform')}{' '}
+          <Link className="ms-1 font-medium text-foreground underline-offset-4 hover:underline" to="/sign-up">
+            {t('auth.createAccount')}
           </Link>
         </CardFooter>
       </Card>

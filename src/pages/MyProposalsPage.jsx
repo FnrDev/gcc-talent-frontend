@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -29,27 +30,35 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
+import i18n from '@/i18n'
 
 const PROPOSAL_STATUSES = ['pending', 'shortlisted', 'accepted', 'declined', 'withdrawn']
 
-const BHD_FORMATTER = new Intl.NumberFormat('en-BH', {
-  style: 'currency',
-  currency: 'BHD',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 3,
-})
+// Arabic keeps Latin digits, consistent with the rest of the marketplace.
+function localeTag() {
+  return i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en-BH'
+}
+
+function formatBhd(value) {
+  return new Intl.NumberFormat(localeTag(), {
+    style: 'currency',
+    currency: 'BHD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(Number(value) || 0)
+}
 
 function getRequestError(error, fallback) {
   return error?.response?.data?.message || error?.response?.data?.err || fallback
 }
 
 function formatDate(value) {
-  if (!value) return 'Unknown date'
+  if (!value) return i18n.t('proposals.unknownDate')
 
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Unknown date'
+  if (Number.isNaN(date.getTime())) return i18n.t('proposals.unknownDate')
 
-  return new Intl.DateTimeFormat('en-BH', {
+  return new Intl.DateTimeFormat(localeTag(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -101,6 +110,7 @@ function proposalEditForm(proposal) {
 }
 
 function PendingProposalActions({ proposal, onUpdated }) {
+  const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(() => proposalEditForm(proposal))
   const [errors, setErrors] = useState({})
@@ -151,10 +161,10 @@ function PendingProposalActions({ proposal, onUpdated }) {
     const amount = Number(form.amount)
     const days = Number(form.deliveryDays)
 
-    if (!form.coverLetter.trim()) nextErrors.coverLetter = 'Cover letter is required.'
-    else if (form.coverLetter.trim().length > 5000) nextErrors.coverLetter = 'Keep the cover letter to 5000 characters or fewer.'
-    if (form.amount === '' || !Number.isFinite(amount) || amount <= 0) nextErrors.amount = 'Enter a positive amount.'
-    if (!Number.isInteger(days) || days < 1) nextErrors.deliveryDays = 'Enter a positive whole number.'
+    if (!form.coverLetter.trim()) nextErrors.coverLetter = t('proposals.coverRequired')
+    else if (form.coverLetter.trim().length > 5000) nextErrors.coverLetter = t('proposals.coverTooLong')
+    if (form.amount === '' || !Number.isFinite(amount) || amount <= 0) nextErrors.amount = t('proposals.positiveAmount')
+    if (!Number.isInteger(days) || days < 1) nextErrors.deliveryDays = t('proposals.positiveWholeNumber')
 
     if (form.milestones.length > 0) {
       const invalid = form.milestones.some((milestone) => (
@@ -166,12 +176,12 @@ function PendingProposalActions({ proposal, onUpdated }) {
         (milestone.dueDate && new Date(`${milestone.dueDate}T23:59:59`).getTime() <= Date.now())
       ))
       const total = form.milestones.reduce((sum, milestone) => sum + Number(milestone.amount || 0), 0)
-      if (invalid) nextErrors.milestones = 'Each milestone needs a title, description, positive amount, and future due date when provided.'
-      else if (Math.round(total * 100) !== Math.round(amount * 100)) nextErrors.milestones = 'Milestones must total the proposal amount.'
+      if (invalid) nextErrors.milestones = t('proposals.milestoneInvalid')
+      else if (Math.round(total * 100) !== Math.round(amount * 100)) nextErrors.milestones = t('proposals.milestoneTotal')
     }
 
-    if (form.attachments.length + form.files.length > 5) nextErrors.attachments = 'Keep no more than five attachments.'
-    if (form.files.some((file) => file.size > 10 * 1024 * 1024)) nextErrors.attachments = 'Each attachment must be 10 MB or smaller.'
+    if (form.attachments.length + form.files.length > 5) nextErrors.attachments = t('proposals.maxAttachments')
+    if (form.files.some((file) => file.size > 10 * 1024 * 1024)) nextErrors.attachments = t('proposals.attachmentTooLarge')
 
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
@@ -208,16 +218,16 @@ function PendingProposalActions({ proposal, onUpdated }) {
       onUpdated(updated)
       setForm(proposalEditForm(updated))
       setEditing(false)
-      setSuccess('Proposal updated.')
+      setSuccess(t('proposals.proposalUpdated'))
     } catch (error) {
-      setRequestError(getRequestError(error, 'We could not update this proposal.'))
+      setRequestError(getRequestError(error, t('proposals.updateFailed')))
     } finally {
       setBusy('')
     }
   }
 
   async function handleWithdraw() {
-    if (!window.confirm('Withdraw this proposal? The client will no longer be able to accept it.')) return
+    if (!window.confirm(t('proposals.confirmWithdraw'))) return
 
     setBusy('withdraw')
     setRequestError('')
@@ -226,7 +236,7 @@ function PendingProposalActions({ proposal, onUpdated }) {
       const updated = await withdrawProposal(proposal._id)
       onUpdated(updated)
     } catch (error) {
-      setRequestError(getRequestError(error, 'We could not withdraw this proposal.'))
+      setRequestError(getRequestError(error, t('proposals.withdrawFailed')))
     } finally {
       setBusy('')
     }
@@ -236,13 +246,13 @@ function PendingProposalActions({ proposal, onUpdated }) {
     <div className="mt-5 border-t pt-5">
       {requestError ? (
         <Alert variant="destructive" className="mb-4">
-          <AlertTitle>Proposal action failed</AlertTitle>
+          <AlertTitle>{t('proposals.actionFailed')}</AlertTitle>
           <AlertDescription>{requestError}</AlertDescription>
         </Alert>
       ) : null}
       {success ? (
         <Alert className="mb-4 border-primary/20 bg-primary/5">
-          <AlertTitle>Proposal saved</AlertTitle>
+          <AlertTitle>{t('proposals.proposalSaved')}</AlertTitle>
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       ) : null}
@@ -250,32 +260,32 @@ function PendingProposalActions({ proposal, onUpdated }) {
       {!editing ? (
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)} disabled={Boolean(busy)}>
-            <HugeiconsIcon icon={Edit02Icon} /> Edit proposal
+            <HugeiconsIcon icon={Edit02Icon} /> {t('proposals.editProposal')}
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={handleWithdraw} disabled={Boolean(busy)}>
             {busy === 'withdraw' ? <Spinner /> : <HugeiconsIcon icon={Delete02Icon} />}
-            Withdraw
+            {t('proposals.withdraw')}
           </Button>
         </div>
       ) : (
         <form className="grid gap-5 rounded-xl border bg-muted/20 p-4" onSubmit={handleSave}>
           <div>
-            <h3 className="font-semibold">Edit pending proposal</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Changes are available only until the client shortlists or decides on the proposal.</p>
+            <h3 className="font-semibold">{t('proposals.editPending')}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{t('proposals.editPendingHint')}</p>
           </div>
           <Field data-invalid={Boolean(errors.coverLetter) || undefined}>
-            <FieldLabel htmlFor={`edit-cover-${proposal._id}`}>Cover letter</FieldLabel>
+            <FieldLabel htmlFor={`edit-cover-${proposal._id}`}>{t('proposals.coverLetter')}</FieldLabel>
             <Textarea id={`edit-cover-${proposal._id}`} name="coverLetter" className="min-h-32" value={form.coverLetter} onChange={updateField} maxLength={5000} />
             {errors.coverLetter ? <FieldError>{errors.coverLetter}</FieldError> : null}
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field data-invalid={Boolean(errors.amount) || undefined}>
-              <FieldLabel htmlFor={`edit-amount-${proposal._id}`}>Amount (BHD)</FieldLabel>
+              <FieldLabel htmlFor={`edit-amount-${proposal._id}`}>{t('proposals.amountBhd')}</FieldLabel>
               <Input id={`edit-amount-${proposal._id}`} name="amount" type="number" min="0.001" step="0.001" value={form.amount} onChange={updateField} />
               {errors.amount ? <FieldError>{errors.amount}</FieldError> : null}
             </Field>
             <Field data-invalid={Boolean(errors.deliveryDays) || undefined}>
-              <FieldLabel htmlFor={`edit-days-${proposal._id}`}>Delivery days</FieldLabel>
+              <FieldLabel htmlFor={`edit-days-${proposal._id}`}>{t('proposals.deliveryDaysLabel')}</FieldLabel>
               <Input id={`edit-days-${proposal._id}`} name="deliveryDays" type="number" min="1" step="1" value={form.deliveryDays} onChange={updateField} />
               {errors.deliveryDays ? <FieldError>{errors.deliveryDays}</FieldError> : null}
             </Field>
@@ -283,24 +293,24 @@ function PendingProposalActions({ proposal, onUpdated }) {
 
           <Field data-invalid={Boolean(errors.milestones) || undefined}>
             <div className="flex items-center justify-between gap-3">
-              <FieldLabel>Milestones</FieldLabel>
+              <FieldLabel>{t('proposals.milestones')}</FieldLabel>
               <Button type="button" size="sm" variant="outline" onClick={addMilestone} disabled={form.milestones.length >= 20}>
-                <HugeiconsIcon icon={PlusSignIcon} /> Add
+                <HugeiconsIcon icon={PlusSignIcon} /> {t('proposals.add')}
               </Button>
             </div>
             <div className="grid gap-3">
               {form.milestones.map((milestone, index) => (
                 <div key={index} className="grid gap-3 rounded-lg border bg-background p-3">
                   <div className="flex justify-end">
-                    <Button type="button" size="icon-sm" variant="ghost" onClick={() => removeMilestone(index)} aria-label={`Remove milestone ${index + 1}`}>
+                    <Button type="button" size="icon-sm" variant="ghost" onClick={() => removeMilestone(index)} aria-label={t('proposals.removeMilestone', { index: index + 1 })}>
                       <HugeiconsIcon icon={Delete02Icon} />
                     </Button>
                   </div>
-                  <Input aria-label={`Milestone ${index + 1} title`} placeholder="Title" value={milestone.title} onChange={(event) => updateMilestone(index, 'title', event.target.value)} maxLength={200} />
-                  <Textarea aria-label={`Milestone ${index + 1} description`} placeholder="Description" value={milestone.description} onChange={(event) => updateMilestone(index, 'description', event.target.value)} maxLength={2000} />
+                  <Input aria-label={t('proposals.milestoneTitle', { index: index + 1 })} placeholder={t('proposals.title')} value={milestone.title} onChange={(event) => updateMilestone(index, 'title', event.target.value)} maxLength={200} />
+                  <Textarea aria-label={t('proposals.milestoneDescription', { index: index + 1 })} placeholder={t('proposals.description')} value={milestone.description} onChange={(event) => updateMilestone(index, 'description', event.target.value)} maxLength={2000} />
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <Input aria-label={`Milestone ${index + 1} amount`} type="number" min="0.001" step="0.001" placeholder="Amount" value={milestone.amount} onChange={(event) => updateMilestone(index, 'amount', event.target.value)} />
-                    <Input aria-label={`Milestone ${index + 1} due date`} type="date" value={milestone.dueDate} onChange={(event) => updateMilestone(index, 'dueDate', event.target.value)} />
+                    <Input aria-label={t('proposals.milestoneAmount', { index: index + 1 })} type="number" min="0.001" step="0.001" placeholder={t('proposals.amount')} value={milestone.amount} onChange={(event) => updateMilestone(index, 'amount', event.target.value)} />
+                    <Input aria-label={t('proposals.milestoneDueDate', { index: index + 1 })} type="date" value={milestone.dueDate} onChange={(event) => updateMilestone(index, 'dueDate', event.target.value)} />
                   </div>
                 </div>
               ))}
@@ -309,13 +319,13 @@ function PendingProposalActions({ proposal, onUpdated }) {
           </Field>
 
           <Field data-invalid={Boolean(errors.attachments) || undefined}>
-            <FieldLabel htmlFor={`edit-files-${proposal._id}`}>Attachments</FieldLabel>
+            <FieldLabel htmlFor={`edit-files-${proposal._id}`}>{t('proposals.attachments')}</FieldLabel>
             {form.attachments.length > 0 ? (
               <div className="grid gap-2">
                 {form.attachments.map((attachment, index) => (
                   <div key={`${attachment.url}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2 text-sm">
-                    <span className="truncate">{attachment.name || `Attachment ${index + 1}`}</span>
-                    <Button type="button" size="icon-sm" variant="ghost" onClick={() => removeAttachment(index)} aria-label={`Remove ${attachment.name || 'attachment'}`}>
+                    <span className="truncate">{attachment.name || t('proposals.attachmentNumber', { index: index + 1 })}</span>
+                    <Button type="button" size="icon-sm" variant="ghost" onClick={() => removeAttachment(index)} aria-label={t('proposals.removeAttachment', { name: attachment.name || t('proposals.attachment') })}>
                       <HugeiconsIcon icon={Delete02Icon} />
                     </Button>
                   </div>
@@ -323,7 +333,7 @@ function PendingProposalActions({ proposal, onUpdated }) {
               </div>
             ) : null}
             <Input id={`edit-files-${proposal._id}`} type="file" multiple onChange={(event) => setForm((current) => ({ ...current, files: Array.from(event.target.files || []).slice(0, 5) }))} />
-            <FieldDescription>Keep up to five files, 10 MB each.</FieldDescription>
+            <FieldDescription>{t('proposals.attachmentsHint')}</FieldDescription>
             {errors.attachments ? <FieldError>{errors.attachments}</FieldError> : null}
           </Field>
 
@@ -333,9 +343,9 @@ function PendingProposalActions({ proposal, onUpdated }) {
               setForm(proposalEditForm(proposal))
               setErrors({})
               setRequestError('')
-            }}>Cancel</Button>
+            }}>{t('proposals.cancel')}</Button>
             <Button type="submit" disabled={Boolean(busy)}>
-              {busy === 'save' ? <><Spinner /> Saving…</> : 'Save proposal'}
+              {busy === 'save' ? <><Spinner /> {t('proposals.saving')}</> : t('proposals.saveProposal')}
             </Button>
           </div>
         </form>
@@ -346,7 +356,7 @@ function PendingProposalActions({ proposal, onUpdated }) {
 
 function LoadingProposals() {
   return (
-    <div className="grid gap-4" aria-label="Loading your proposals">
+    <div className="grid gap-4" aria-label={i18n.t('proposals.loadingYourProposals')}>
       {[0, 1, 2].map((item) => (
         <Card key={item}>
           <CardContent className="space-y-4">
@@ -366,6 +376,7 @@ function LoadingProposals() {
 }
 
 function MyProposalsPage() {
+  const { t } = useTranslation()
   const [proposals, setProposals] = useState([])
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 })
   const [status, setStatus] = useState('')
@@ -390,7 +401,7 @@ function MyProposalsPage() {
       setPagination(result.pagination)
     } catch (requestError) {
       if (requestId !== requestSequence.current) return
-      setError(getRequestError(requestError, 'We could not load your proposals. Please try again.'))
+      setError(getRequestError(requestError, i18n.t('proposals.loadFailed')))
     } finally {
       if (requestId === requestSequence.current) setLoading(false)
     }
@@ -407,9 +418,9 @@ function MyProposalsPage() {
 
   const resultSummary = useMemo(() => {
     const total = pagination.total ?? proposals.length
-    if (total === 0) return 'No proposals'
-    return `${total} ${total === 1 ? 'proposal' : 'proposals'}`
-  }, [pagination.total, proposals.length])
+    if (total === 0) return t('proposals.noProposals')
+    return t('proposals.count', { count: total })
+  }, [pagination.total, proposals.length, t])
 
   function handleStatusChange(event) {
     setStatus(event.target.value)
@@ -440,28 +451,28 @@ function MyProposalsPage() {
     <main className="min-h-[calc(100vh-3.5rem)] bg-muted/25">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
         <header className="mb-8">
-          <p className="text-sm font-medium text-primary">Freelancer workspace</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">My proposals</h1>
+          <p className="text-sm font-medium text-primary">{t('proposals.freelancerWorkspace')}</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{t('proposals.myProposals')}</h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Follow every proposal from submission to the client&apos;s final decision.
+            {t('proposals.subtitle')}
           </p>
         </header>
 
         <section className="mb-5 flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
             <HugeiconsIcon icon={SentIcon} className="size-4" />
-            <span>{loading ? 'Loading proposals…' : resultSummary}</span>
+            <span>{loading ? t('proposals.loadingProposals') : resultSummary}</span>
           </div>
           <NativeSelect
             className="h-9 w-full capitalize sm:w-44"
-            aria-label="Filter proposals by status"
+            aria-label={t('proposals.filterByStatus')}
             value={status}
             onChange={handleStatusChange}
           >
-            <NativeSelectOption value="">All statuses</NativeSelectOption>
+            <NativeSelectOption value="">{t('proposals.allStatuses')}</NativeSelectOption>
             {PROPOSAL_STATUSES.map((proposalStatus) => (
               <NativeSelectOption key={proposalStatus} value={proposalStatus}>
-                {proposalStatus}
+                {t(`status.${proposalStatus}`)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -469,10 +480,10 @@ function MyProposalsPage() {
 
         {error ? (
           <Alert variant="destructive" className="mb-5">
-            <AlertTitle>Could not load proposals</AlertTitle>
+            <AlertTitle>{t('proposals.couldNotLoad')}</AlertTitle>
             <AlertDescription className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span>{error}</span>
-              <Button size="sm" variant="outline" onClick={loadProposals}>Try again</Button>
+              <Button size="sm" variant="outline" onClick={loadProposals}>{t('common.tryAgain')}</Button>
             </AlertDescription>
           </Alert>
         ) : null}
@@ -486,19 +497,19 @@ function MyProposalsPage() {
                 <HugeiconsIcon icon={File02Icon} className="size-6" />
               </span>
               <h2 className="text-lg font-semibold">
-                {status ? `No ${status} proposals` : 'No proposals yet'}
+                {status ? t('proposals.noStatusProposals', { status: t(`status.${status}`) }) : t('proposals.noProposalsYet')}
               </h2>
               <p className="mt-1 text-muted-foreground">
                 {status
-                  ? 'Try another status or view all of your proposals.'
-                  : 'Browse available jobs and send a tailored proposal when you find the right fit.'}
+                  ? t('proposals.tryAnotherStatus')
+                  : t('proposals.browsePrompt')}
               </p>
               {status ? (
-                <Button className="mt-5" variant="outline" onClick={() => setStatus('')}>View all proposals</Button>
+                <Button className="mt-5" variant="outline" onClick={() => setStatus('')}>{t('proposals.viewAll')}</Button>
               ) : (
                 <Button className="mt-5" nativeButton={false} render={<Link to="/jobs" />}>
                   <HugeiconsIcon icon={Briefcase02Icon} data-icon="inline-start" />
-                  Browse jobs
+                  {t('proposals.browseJobs')}
                 </Button>
               )}
             </CardContent>
@@ -520,16 +531,16 @@ function MyProposalsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge className="capitalize" variant={statusVariant(proposal.status)}>
-                            {proposal.status}
+                            {t(`status.${proposal.status}`)}
                           </Badge>
                           {job?.status ? (
                             <span className="text-xs capitalize text-muted-foreground">
-                              Job {job.status.replaceAll('_', ' ')}
+                              {t('proposals.jobStatus', { status: i18n.exists(`status.${job.status}`) ? t(`status.${job.status}`) : job.status.replaceAll('_', ' ') })}
                             </span>
                           ) : null}
                         </div>
                         <h2 className="mt-3 text-lg font-semibold leading-snug sm:text-xl">
-                          {job?.title || 'Job proposal'}
+                          {job?.title || t('proposals.jobProposal')}
                         </h2>
                         <p className="mt-2 line-clamp-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                           {proposal.coverLetter}
@@ -537,27 +548,27 @@ function MyProposalsPage() {
 
                         {proposal.status === 'declined' && proposal.declineReason ? (
                           <div className="mt-4 rounded-lg bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                            <span className="font-medium">Client note:</span> {proposal.declineReason}
+                            <span className="font-medium">{t('proposals.clientNote')}</span> {proposal.declineReason}
                           </div>
                         ) : null}
 
                         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                           <span className="inline-flex items-center gap-1.5">
                             <HugeiconsIcon icon={Money03Icon} className="size-4" />
-                            {BHD_FORMATTER.format(proposal.amount || 0)} proposed
+                            {t('proposals.amountProposed', { amount: formatBhd(proposal.amount) })}
                           </span>
                           <span className="inline-flex items-center gap-1.5">
                             <HugeiconsIcon icon={Clock01Icon} className="size-4" />
-                            {proposal.deliveryDays || 0} {(proposal.deliveryDays || 0) === 1 ? 'day' : 'days'} delivery
+                            {t('proposals.deliveryDays', { count: proposal.deliveryDays || 0 })}
                           </span>
                           <span className="inline-flex items-center gap-1.5">
                             <HugeiconsIcon icon={Calendar03Icon} className="size-4" />
-                            Sent {formatDate(proposal.createdAt)}
+                            {t('proposals.sentOn', { date: formatDate(proposal.createdAt) })}
                           </span>
                         </div>
                       </div>
 
-                      <div className="shrink-0 border-t pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+                      <div className="shrink-0 border-t pt-4 sm:border-s sm:border-t-0 sm:ps-5 sm:pt-0">
                         {jobId && isJobOpen ? (
                           <Button
                             className="w-full sm:w-auto"
@@ -565,12 +576,12 @@ function MyProposalsPage() {
                             nativeButton={false}
                             render={<Link to={`/jobs/${jobId}`} />}
                           >
-                            View job
+                            {t('proposals.viewJob')}
                             <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                           </Button>
                         ) : (
                           <span className="text-sm capitalize text-muted-foreground">
-                            {jobStatus ? `Job ${jobStatus.replaceAll('_', ' ')}` : 'Job unavailable'}
+                            {jobStatus ? t('proposals.jobStatus', { status: i18n.exists(`status.${jobStatus}`) ? t(`status.${jobStatus}`) : jobStatus.replaceAll('_', ' ') }) : t('proposals.jobUnavailable')}
                           </span>
                         )}
                       </div>
@@ -589,15 +600,15 @@ function MyProposalsPage() {
         ) : null}
 
         {!loading && !error && pagination.totalPages > 1 ? (
-          <nav className="mt-7 flex items-center justify-between" aria-label="Proposals pagination">
+          <nav className="mt-7 flex items-center justify-between" aria-label={t('proposals.pagination')}>
             <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
-              Previous
+              {t('common.previous')}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {pagination.page || page} of {pagination.totalPages}
+              {t('common.pageOfPlain', { page: pagination.page || page, total: pagination.totalPages })}
             </span>
             <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>
-              Next
+              {t('common.next')}
             </Button>
           </nav>
         ) : null}

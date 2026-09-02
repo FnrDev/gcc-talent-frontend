@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -19,52 +20,53 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import i18n from '@/i18n'
 
-const CURRENCY_FORMATTER = new Intl.NumberFormat('en-BH', {
-  style: 'currency',
-  currency: 'BHD',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 3,
-})
+// Arabic keeps Latin digits, matching the rest of the marketplace.
+function localeTag() {
+  return i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en-BH'
+}
 
-const INTEGER_FORMATTER = new Intl.NumberFormat('en-BH')
+function formatMoney(value) {
+  return new Intl.NumberFormat(localeTag(), {
+    style: 'currency',
+    currency: 'BHD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(Number(value) || 0)
+}
+
+function formatInteger(value) {
+  return new Intl.NumberFormat(localeTag()).format(Number(value) || 0)
+}
 
 const ROLE_COPY = {
-  client: {
-    eyebrow: 'Client workspace',
-    description: 'Keep hiring, service orders, and active work moving from one place.',
-  },
-  freelancer: {
-    eyebrow: 'Freelancer workspace',
-    description: 'Track opportunities, current work, services, and earnings at a glance.',
-  },
-  admin: {
-    eyebrow: 'Platform workspace',
-    description: 'A live overview of marketplace activity and the people using it.',
-  },
+  client: { eyebrow: 'dashboard.clientEyebrow', description: 'dashboard.clientDescription' },
+  freelancer: { eyebrow: 'dashboard.freelancerEyebrow', description: 'dashboard.freelancerDescription' },
+  admin: { eyebrow: 'dashboard.adminEyebrow', description: 'dashboard.adminDescription' },
 }
 
 const STAT_CONFIG = {
   client: [
-    ['openJobs', 'Open jobs', Briefcase01Icon],
-    ['proposalsReceived', 'Proposals received', UserGroupIcon],
-    ['activeContracts', 'Active contracts', FileSearchIcon],
-    ['serviceOrders', 'Service orders', DashboardSquare01Icon],
-    ['totalSpent', 'Funds committed', Money03Icon, true],
+    ['openJobs', 'dashboard.openJobs', Briefcase01Icon],
+    ['proposalsReceived', 'dashboard.proposalsReceived', UserGroupIcon],
+    ['activeContracts', 'dashboard.activeContracts', FileSearchIcon],
+    ['serviceOrders', 'dashboard.serviceOrders', DashboardSquare01Icon],
+    ['totalSpent', 'dashboard.totalSpent', Money03Icon, true],
   ],
   freelancer: [
-    ['activeProposals', 'Active proposals', FileSearchIcon],
-    ['acceptedProposals', 'Accepted proposals', UserGroupIcon],
-    ['activeContracts', 'Active contracts', Briefcase01Icon],
-    ['activeServices', 'Published services', DashboardSquare01Icon],
-    ['totalEarned', 'Total earned', Money03Icon, true],
+    ['activeProposals', 'dashboard.activeProposals', FileSearchIcon],
+    ['acceptedProposals', 'dashboard.acceptedProposals', UserGroupIcon],
+    ['activeContracts', 'dashboard.activeContracts', Briefcase01Icon],
+    ['activeServices', 'dashboard.activeServices', DashboardSquare01Icon],
+    ['totalEarned', 'dashboard.totalEarned', Money03Icon, true],
   ],
   admin: [
-    ['totalUsers', 'Total users', UserGroupIcon],
-    ['openJobs', 'Open jobs', Briefcase01Icon],
-    ['activeContracts', 'Active contracts', FileSearchIcon],
-    ['transactionCount', 'Transactions', DashboardSquare01Icon],
-    ['transactionVolume', 'Transaction volume', Money03Icon, true],
+    ['totalUsers', 'dashboard.totalUsers', UserGroupIcon],
+    ['openJobs', 'dashboard.openJobs', Briefcase01Icon],
+    ['activeContracts', 'dashboard.activeContracts', FileSearchIcon],
+    ['transactionCount', 'dashboard.transactionCount', DashboardSquare01Icon],
+    ['transactionVolume', 'dashboard.transactionVolume', Money03Icon, true],
   ],
 }
 
@@ -73,19 +75,22 @@ function getRequestError(error, fallback) {
 }
 
 function formatDate(value) {
-  if (!value) return 'Recently updated'
+  if (!value) return i18n.t('dashboard.recentlyUpdated')
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Recently updated'
+  if (Number.isNaN(date.getTime())) return i18n.t('dashboard.recentlyUpdated')
 
-  return new Intl.DateTimeFormat('en-BH', {
+  return new Intl.DateTimeFormat(localeTag(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   }).format(date)
 }
 
+// Backend enums map to copy; anything unmapped falls back to the raw value
+// with underscores stripped, so a new status still renders sensibly.
 function formatStatus(status) {
-  return status?.replaceAll('_', ' ') || 'active'
+  if (!status) return i18n.t('status.active')
+  return i18n.exists(`status.${status}`) ? i18n.t(`status.${status}`) : status.replaceAll('_', ' ')
 }
 
 function statusVariant(status) {
@@ -97,7 +102,7 @@ function statusVariant(status) {
 
 function LoadingDashboard() {
   return (
-    <div aria-label="Loading dashboard" className="space-y-8">
+    <div aria-label={i18n.t('dashboard.loadingDashboard')} className="space-y-8">
       <div className="space-y-3">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-10 w-72 max-w-full" />
@@ -122,7 +127,7 @@ function StatCard({ icon, label, value, money }) {
           <HugeiconsIcon icon={icon} className="size-5" />
         </span>
         <p className="text-2xl font-semibold tracking-tight">
-          {money ? CURRENCY_FORMATTER.format(Number(value) || 0) : INTEGER_FORMATTER.format(Number(value) || 0)}
+          {money ? formatMoney(value) : formatInteger(value)}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">{label}</p>
       </CardContent>
@@ -171,7 +176,7 @@ function RecentActivity({ dashboard }) {
         title: job.title,
         href: job.status === 'open' ? `/jobs/${job._id}` : '/jobs/mine',
         status: job.status,
-        meta: `${job.proposalsCount || 0} proposal${job.proposalsCount === 1 ? '' : 's'} · ${formatDate(job.createdAt)}`,
+        meta: `${i18n.t('format.proposalsCount', { count: job.proposalsCount || 0 })} · ${formatDate(job.createdAt)}`,
       })),
       ...(recent.contracts || []).map((contract) => ({
         key: `contract-${contract._id}`,
@@ -179,12 +184,12 @@ function RecentActivity({ dashboard }) {
         href: `/contracts/${contract._id}`,
         status: contract.status,
         person: contract.freelancer,
-        meta: `${CURRENCY_FORMATTER.format(contract.totalAmount || 0)} · ${formatDate(contract.updatedAt)}`,
+        meta: `${formatMoney(contract.totalAmount)} · ${formatDate(contract.updatedAt)}`,
       })),
     ].slice(0, 7)
 
     return items.length ? items.map((item) => <RecentRow key={item.key} {...item} />) : (
-      <EmptyRecent>Your jobs, proposals, and orders will appear here.</EmptyRecent>
+      <EmptyRecent>{i18n.t('dashboard.emptyClient')}</EmptyRecent>
     )
   }
 
@@ -192,10 +197,10 @@ function RecentActivity({ dashboard }) {
     const items = [
       ...(recent.proposals || []).map((proposal) => ({
         key: `proposal-${proposal._id}`,
-        title: proposal.job?.title || 'Job proposal',
+        title: proposal.job?.title || i18n.t('dashboard.jobProposal'),
         href: proposal.job?._id && proposal.job?.status === 'open' ? `/jobs/${proposal.job._id}` : '/proposals',
         status: proposal.status,
-        meta: `${CURRENCY_FORMATTER.format(proposal.amount || 0)} · ${formatDate(proposal.updatedAt)}`,
+        meta: `${formatMoney(proposal.amount)} · ${formatDate(proposal.updatedAt)}`,
       })),
       ...(recent.contracts || []).map((contract) => ({
         key: `contract-${contract._id}`,
@@ -203,12 +208,12 @@ function RecentActivity({ dashboard }) {
         href: `/contracts/${contract._id}`,
         status: contract.status,
         person: contract.client,
-        meta: `${CURRENCY_FORMATTER.format(contract.totalAmount || 0)} · ${formatDate(contract.updatedAt)}`,
+        meta: `${formatMoney(contract.totalAmount)} · ${formatDate(contract.updatedAt)}`,
       })),
     ].slice(0, 7)
 
     return items.length ? items.map((item) => <RecentRow key={item.key} {...item} />) : (
-      <EmptyRecent>Your proposals and contracts will appear here.</EmptyRecent>
+      <EmptyRecent>{i18n.t('dashboard.emptyFreelancer')}</EmptyRecent>
     )
   }
 
@@ -218,19 +223,20 @@ function RecentActivity({ dashboard }) {
       key={recentUser._id}
       title={recentUser.name}
       status={recentUser.status}
-      meta={`${recentUser.role} · Joined ${formatDate(recentUser.createdAt)}`}
+      meta={`${recentUser.role} · ${i18n.t('dashboard.joined', { date: formatDate(recentUser.createdAt) })}`}
     />
-  )) : <EmptyRecent>New marketplace accounts will appear here.</EmptyRecent>
+  )) : <EmptyRecent>{i18n.t('dashboard.emptyAdmin')}</EmptyRecent>
 }
 
 function Dashboard() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const location = useLocation()
   const [dashboard, setDashboard] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const firstName = user?.name?.trim().split(/\s+/)[0] || 'there'
+  const firstName = user?.name?.trim().split(/\s+/)[0] || t('dashboard.there')
 
   const loadDashboard = useCallback(async () => {
     setLoading(true)
@@ -239,7 +245,7 @@ function Dashboard() {
     try {
       setDashboard(await getDashboard())
     } catch (requestError) {
-      setError(getRequestError(requestError, 'We could not load your dashboard. Please try again.'))
+      setError(getRequestError(requestError, i18n.t('dashboard.loadFailed')))
     } finally {
       setLoading(false)
     }
@@ -265,12 +271,12 @@ function Dashboard() {
 
         {loading ? <LoadingDashboard /> : error ? (
           <Alert variant="destructive" className="max-w-2xl">
-            <AlertTitle>Dashboard unavailable</AlertTitle>
+            <AlertTitle>{t('dashboard.unavailable')}</AlertTitle>
             <AlertDescription className="mt-2 flex flex-col items-start gap-3">
               <span>{error}</span>
               <Button type="button" variant="outline" size="sm" onClick={loadDashboard}>
                 <HugeiconsIcon icon={RefreshIcon} data-icon="inline-start" />
-                Try again
+                {t('common.tryAgain')}
               </Button>
             </AlertDescription>
           </Alert>
@@ -278,29 +284,29 @@ function Dashboard() {
           <>
             <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-sm font-medium text-primary">{copy.eyebrow}</p>
-                <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Welcome back, {firstName}</h1>
-                <p className="mt-2 max-w-2xl text-muted-foreground">{copy.description}</p>
+                <p className="text-sm font-medium text-primary">{t(copy.eyebrow)}</p>
+                <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{t('dashboard.welcomeBack', { name: firstName })}</h1>
+                <p className="mt-2 max-w-2xl text-muted-foreground">{t(copy.description)}</p>
               </div>
               {dashboard.role !== 'admin' ? (
                 <Button variant="outline" nativeButton={false} render={<Link to={`/profile/${user?._id || user?.id}`} />}>
-                  View public profile
+                  {t('dashboard.viewPublicProfile')}
                   <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                 </Button>
               ) : null}
             </header>
 
-            <section aria-label="Account summary" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <section aria-label={t('dashboard.accountSummary')} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {stats.map(([key, label, icon, money]) => (
-                <StatCard key={key} icon={icon} label={label} value={dashboard.stats?.[key]} money={money} />
+                <StatCard key={key} icon={icon} label={t(label)} value={dashboard.stats?.[key]} money={money} />
               ))}
             </section>
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[1.55fr_1fr]">
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent activity</CardTitle>
-                  <CardDescription>The latest work that needs your attention.</CardDescription>
+                  <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
+                  <CardDescription>{t('dashboard.recentDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <RecentActivity dashboard={dashboard} />
@@ -310,8 +316,8 @@ function Dashboard() {
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Quick actions</CardTitle>
-                    <CardDescription>Continue with the most common next steps.</CardDescription>
+                    <CardTitle>{t('dashboard.quickActions')}</CardTitle>
+                    <CardDescription>{t('dashboard.quickDescription')}</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-2">
                     {(dashboard.quickActions || []).map((action) => (
@@ -327,18 +333,18 @@ function Dashboard() {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <HugeiconsIcon icon={Money03Icon} className="size-5 text-primary" />
-                      Wallet
+                      {t('dashboard.wallet')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-2xl font-semibold tracking-tight">
-                      {CURRENCY_FORMATTER.format(dashboard.wallet?.available || 0)}
+                      {formatMoney(dashboard.wallet?.available)}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {CURRENCY_FORMATTER.format(dashboard.wallet?.pending || 0)} pending
+                      {t('dashboard.pendingAmount', { amount: formatMoney(dashboard.wallet?.pending) })}
                     </p>
                     <Button className="mt-4 w-full" variant="secondary" nativeButton={false} render={<Link to="/wallet" />}>
-                      Open wallet
+                      {t('dashboard.openWallet')}
                       <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                     </Button>
                   </CardContent>
@@ -346,7 +352,7 @@ function Dashboard() {
 
                 <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
                   <HugeiconsIcon icon={Clock01Icon} className="size-4" />
-                  Updated {formatDate(dashboard.generatedAt)}
+                  {t('dashboard.updatedAt', { date: formatDate(dashboard.generatedAt) })}
                 </div>
               </div>
             </div>

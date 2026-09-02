@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import UserLink from '@/components/UserLink'
@@ -9,34 +10,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/context/AuthContext'
 import { getContracts } from '@/services/contractService'
+import i18n from '@/i18n'
 
 const MONEY_FORMATTERS = new Map()
 
 function formatMoney(value, currency = 'BHD') {
   const code = typeof currency === 'string' && currency.trim() ? currency.toUpperCase() : 'BHD'
-  if (!MONEY_FORMATTERS.has(code)) {
-    MONEY_FORMATTERS.set(code, new Intl.NumberFormat('en-BH', {
+  // Cache per locale as well as per currency, or a language switch keeps the old digits.
+  const cacheKey = `${i18n.language}:${code}`
+  if (!MONEY_FORMATTERS.has(cacheKey)) {
+    MONEY_FORMATTERS.set(cacheKey, new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en-BH', {
       style: 'currency',
       currency: code,
       minimumFractionDigits: code === 'BHD' ? 3 : 2,
       maximumFractionDigits: code === 'BHD' ? 3 : 2,
     }))
   }
-  return MONEY_FORMATTERS.get(code).format(Number(value) || 0)
+  return MONEY_FORMATTERS.get(cacheKey).format(Number(value) || 0)
 }
 
 const FILTERS = [
-  ['', 'All'],
-  ['active', 'Active'],
-  ['completed', 'Completed'],
-  ['cancelled', 'Cancelled'],
+  ['', 'workspace.all'],
+  ['active', 'status.active'],
+  ['completed', 'status.completed'],
+  ['cancelled', 'status.cancelled'],
 ]
 
 function requestError(error) {
-  return error?.response?.data?.message || 'We could not load your contracts.'
+  return error?.response?.data?.message || i18n.t('workspace.contractsLoadFailed')
 }
 
 function MyContractsPage() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [contracts, setContracts] = useState([])
   const [pagination, setPagination] = useState(null)
@@ -70,15 +75,15 @@ function MyContractsPage() {
     <main className="mx-auto min-h-[65vh] w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-primary">Work</p>
-          <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">My contracts</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Every job and service contract where you are the client or freelancer.</p>
+          <p className="text-sm font-medium text-primary">{t('workspace.work')}</p>
+          <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">{t('workspace.myContracts')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('workspace.contractsSubtitle')}</p>
         </div>
-        <Button variant="outline" onClick={loadContracts}>Refresh</Button>
+        <Button variant="outline" onClick={loadContracts}>{t('workspace.refresh')}</Button>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2" aria-label="Filter contracts by status">
-        {FILTERS.map(([value, label]) => (
+      <div className="mb-5 flex flex-wrap gap-2" aria-label={t('workspace.filterByStatus')}>
+        {FILTERS.map(([value, labelKey]) => (
           <Button
             key={value || 'all'}
             size="sm"
@@ -88,14 +93,14 @@ function MyContractsPage() {
               setPage(1)
             }}
           >
-            {label}
+            {t(labelKey)}
           </Button>
         ))}
       </div>
 
       {error && (
         <Alert variant="destructive" className="mb-5">
-          <AlertTitle>Contracts unavailable</AlertTitle>
+          <AlertTitle>{t('workspace.contractsUnavailable')}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -115,24 +120,24 @@ function MyContractsPage() {
               <Card key={contract._id} className="h-full">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline" className="capitalize">{contract.source?.type || 'contract'}</Badge>
-                    <Badge variant={contract.status === 'cancelled' ? 'destructive' : contract.status === 'completed' ? 'default' : 'secondary'}>{contract.status}</Badge>
+                    <Badge variant="outline" className="capitalize">{contract.source?.type || t('workspace.contract')}</Badge>
+                    <Badge variant={contract.status === 'cancelled' ? 'destructive' : contract.status === 'completed' ? 'default' : 'secondary'}>{i18n.exists(`status.${contract.status}`) ? t(`status.${contract.status}`) : contract.status}</Badge>
                   </div>
                   <CardTitle className="mt-2">{contract.title}</CardTitle>
                   <CardDescription>
-                    With <UserLink user={counterpart} className="inline-flex font-medium text-foreground" />
+                    {t('workspace.with')} <UserLink user={counterpart} className="inline-flex font-medium text-foreground" />
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto space-y-4">
                   <div className="flex items-end justify-between gap-3 rounded-lg bg-muted/45 p-3">
                     <div>
-                      <p className="text-xs text-muted-foreground">Value</p>
+                      <p className="text-xs text-muted-foreground">{t('workspace.value')}</p>
                       <p className="font-heading text-lg font-medium">{formatMoney(contract.totalAmount, contract.currency)}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{approved}/{total} approved</p>
+                    <p className="text-sm text-muted-foreground">{t('workspace.approvedRatio', { approved, total })}</p>
                   </div>
                   <Button className="w-full" nativeButton={false} render={<Link to={`/contracts/${contract._id}`} />}>
-                    Open workspace
+                    {t('workspace.openWorkspace')}
                   </Button>
                 </CardContent>
               </Card>
@@ -142,17 +147,17 @@ function MyContractsPage() {
       ) : (
         <Card>
           <CardContent className="py-14 text-center">
-            <h2 className="font-heading text-xl font-medium">No contracts found</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Contracts appear here after a proposal is accepted or a service is ordered.</p>
+            <h2 className="font-heading text-xl font-medium">{t('workspace.noContracts')}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{t('workspace.noContractsDescription')}</p>
           </CardContent>
         </Card>
       )}
 
       {pagination?.totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
-          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</Button>
-          <span className="text-sm text-muted-foreground">Page {page} of {pagination.totalPages}</span>
-          <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>Next</Button>
+          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>{t('common.previous')}</Button>
+          <span className="text-sm text-muted-foreground">{t('common.pageOfPlain', { page, total: pagination.totalPages })}</span>
+          <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>{t('common.next')}</Button>
         </div>
       )}
     </main>

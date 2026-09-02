@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -21,34 +22,42 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import i18n from '@/i18n'
 
 const JOB_STATUS_TABS = [
-  { value: 'all', label: 'All' },
-  { value: 'draft', label: 'Drafts' },
-  { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'closed', label: 'Closed' },
+  { value: 'all', labelKey: 'workspace.all' },
+  { value: 'draft', labelKey: 'workspace.drafts' },
+  { value: 'open', labelKey: 'status.open' },
+  { value: 'in_progress', labelKey: 'status.in_progress' },
+  { value: 'completed', labelKey: 'status.completed' },
+  { value: 'closed', labelKey: 'status.closed' },
 ]
 
-const BUDGET_FORMATTER = new Intl.NumberFormat('en-BH', {
-  style: 'currency',
-  currency: 'BHD',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 3,
-})
+// Arabic keeps Latin digits, consistent with the rest of the marketplace.
+function localeTag() {
+  return i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en-BH'
+}
+
+function budgetFormatter() {
+  return new Intl.NumberFormat(localeTag(), {
+    style: 'currency',
+    currency: 'BHD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  })
+}
 
 function getRequestError(error, fallback) {
   return error?.response?.data?.message || error?.response?.data?.err || fallback
 }
 
 function formatDate(value) {
-  if (!value) return 'No date set'
+  if (!value) return i18n.t('workspace.noDateSet')
 
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'No date set'
+  if (Number.isNaN(date.getTime())) return i18n.t('workspace.noDateSet')
 
-  return new Intl.DateTimeFormat('en-BH', {
+  return new Intl.DateTimeFormat(localeTag(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -56,21 +65,23 @@ function formatDate(value) {
 }
 
 function formatBudget(job) {
+  const format = budgetFormatter()
   const minimum = Number.isFinite(job?.budgetMin) ? job.budgetMin : null
   const maximum = Number.isFinite(job?.budgetMax) ? job.budgetMax : null
 
   if (minimum !== null && maximum !== null) {
-    return `${BUDGET_FORMATTER.format(minimum)} – ${BUDGET_FORMATTER.format(maximum)}`
+    return `${format.format(minimum)} – ${format.format(maximum)}`
   }
 
-  if (minimum !== null) return `From ${BUDGET_FORMATTER.format(minimum)}`
-  if (maximum !== null) return `Up to ${BUDGET_FORMATTER.format(maximum)}`
+  if (minimum !== null) return i18n.t('workspace.fromAmount', { amount: format.format(minimum) })
+  if (maximum !== null) return i18n.t('workspace.upToAmount', { amount: format.format(maximum) })
 
-  return 'Budget not specified'
+  return i18n.t('workspace.budgetNotSpecified')
 }
 
 function statusLabel(status) {
-  return status?.replaceAll('_', ' ') || 'draft'
+  if (!status) return i18n.t('status.draft')
+  return i18n.exists(`status.${status}`) ? i18n.t(`status.${status}`) : status.replaceAll('_', ' ')
 }
 
 function statusVariant(status) {
@@ -95,7 +106,7 @@ function normalizeResult(result) {
 
 function LoadingJobs() {
   return (
-    <div className="grid gap-4" aria-label="Loading your jobs">
+    <div className="grid gap-4" aria-label={i18n.t('workspace.loadingYourJobs')}>
       {[0, 1, 2].map((item) => (
         <Card key={item}>
           <CardContent className="space-y-4">
@@ -115,6 +126,7 @@ function LoadingJobs() {
 }
 
 function MyJobsPage() {
+  const { t } = useTranslation()
   const [jobs, setJobs] = useState([])
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 })
   const [status, setStatus] = useState('all')
@@ -138,7 +150,7 @@ function MyJobsPage() {
       setJobs(result.jobs)
       setPagination(result.pagination)
     } catch (requestError) {
-      setError(getRequestError(requestError, 'We could not load your jobs. Please try again.'))
+      setError(getRequestError(requestError, i18n.t('workspace.jobsLoadFailed')))
     } finally {
       setLoading(false)
     }
@@ -152,9 +164,9 @@ function MyJobsPage() {
 
   const resultSummary = useMemo(() => {
     const total = pagination.total ?? jobs.length
-    if (total === 0) return 'No jobs'
-    return `${total} ${total === 1 ? 'job' : 'jobs'}`
-  }, [jobs.length, pagination.total])
+    if (total === 0) return t('workspace.noJobs')
+    return t('workspace.jobCount', { count: total })
+  }, [jobs.length, pagination.total, t])
 
   function handleStatusChange(value) {
     setStatus(value)
@@ -163,8 +175,8 @@ function MyJobsPage() {
 
   async function handleJobAction(job, action) {
     const confirmations = {
-      close: `Close “${job.title}”? Freelancers will no longer be able to submit proposals.`,
-      delete: `Delete the draft “${job.title}”? This cannot be undone.`,
+      close: t('workspace.confirmClose', { title: job.title }),
+      delete: t('workspace.confirmDelete', { title: job.title }),
     }
 
     if (confirmations[action] && !window.confirm(confirmations[action])) return
@@ -176,10 +188,10 @@ function MyJobsPage() {
       delete: () => deleteMyJob(job._id),
     }
     const successMessages = {
-      publish: 'Your draft is now open for proposals.',
-      close: 'The job is now closed to new proposals.',
-      reopen: 'The job is open for proposals again.',
-      delete: 'The draft was deleted.',
+      publish: t('workspace.publishSuccess'),
+      close: t('workspace.closeSuccess'),
+      reopen: t('workspace.reopenSuccess'),
+      delete: t('workspace.deleteSuccess'),
     }
 
     setPendingAction(`${action}:${job._id}`)
@@ -191,7 +203,7 @@ function MyJobsPage() {
       setActionSuccess(successMessages[action])
       await loadJobs()
     } catch (requestError) {
-      setActionError(getRequestError(requestError, `We could not ${action} this job. Please try again.`))
+      setActionError(getRequestError(requestError, t('workspace.actionFailed')))
     } finally {
       setPendingAction('')
     }
@@ -202,28 +214,28 @@ function MyJobsPage() {
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
         <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-primary">Hiring workspace</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">My jobs</h1>
+            <p className="text-sm font-medium text-primary">{t('workspace.hiringWorkspace')}</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{t('workspace.myJobs')}</h1>
             <p className="mt-2 max-w-2xl text-muted-foreground">
-              Track every job you have posted and review proposals from interested freelancers.
+              {t('workspace.myJobsSubtitle')}
             </p>
           </div>
           <Button className="h-10 self-start px-4 sm:self-auto" nativeButton={false} render={<Link to="/jobs/new" />}>
             <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
-            Create a job
+            {t('workspace.createJob')}
           </Button>
         </header>
 
         <section className="mb-5 flex flex-col gap-3 rounded-xl border bg-card p-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
             <HugeiconsIcon icon={Briefcase02Icon} className="size-4" />
-            <span>{loading ? 'Loading jobs…' : resultSummary}</span>
+            <span>{loading ? t('workspace.loadingJobs') : resultSummary}</span>
           </div>
           <Tabs value={status} onValueChange={handleStatusChange}>
-            <TabsList className="h-auto w-full justify-start overflow-x-auto sm:w-fit" aria-label="Filter jobs by status">
+            <TabsList className="h-auto w-full justify-start overflow-x-auto sm:w-fit" aria-label={t('workspace.filterByStatus')}>
               {JOB_STATUS_TABS.map((tab) => (
                 <TabsTrigger key={tab.value || 'all'} value={tab.value} className="px-3 py-1.5">
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -232,24 +244,24 @@ function MyJobsPage() {
 
         {actionSuccess ? (
           <Alert className="mb-5 border-primary/20 bg-primary/5">
-            <AlertTitle>Job updated</AlertTitle>
+            <AlertTitle>{t('workspace.jobUpdated')}</AlertTitle>
             <AlertDescription>{actionSuccess}</AlertDescription>
           </Alert>
         ) : null}
 
         {actionError ? (
           <Alert variant="destructive" className="mb-5">
-            <AlertTitle>Could not update job</AlertTitle>
+            <AlertTitle>{t('workspace.couldNotUpdateJob')}</AlertTitle>
             <AlertDescription>{actionError}</AlertDescription>
           </Alert>
         ) : null}
 
         {error ? (
           <Alert variant="destructive" className="mb-5">
-            <AlertTitle>Could not load jobs</AlertTitle>
+            <AlertTitle>{t('workspace.couldNotLoadJobs')}</AlertTitle>
             <AlertDescription className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span>{error}</span>
-              <Button size="sm" variant="outline" onClick={loadJobs}>Try again</Button>
+              <Button size="sm" variant="outline" onClick={loadJobs}>{t('common.tryAgain')}</Button>
             </AlertDescription>
           </Alert>
         ) : null}
@@ -263,19 +275,19 @@ function MyJobsPage() {
                 <HugeiconsIcon icon={Briefcase02Icon} className="size-6" />
               </span>
               <h2 className="text-lg font-semibold">
-                {status !== 'all' ? `No ${statusLabel(status)} jobs` : 'Create your first job'}
+                {status !== 'all' ? t('workspace.noStatusJobs', { status: statusLabel(status) }) : t('workspace.createFirstJob')}
               </h2>
               <p className="mt-1 text-muted-foreground">
                 {status !== 'all'
-                  ? 'Try another status or view all of your jobs.'
-                  : 'Describe the work you need and start receiving proposals from freelancers.'}
+                  ? t('workspace.tryAnotherStatus')
+                  : t('workspace.describeWork')}
               </p>
               {status !== 'all' ? (
-                <Button className="mt-5" variant="outline" onClick={() => setStatus('all')}>View all jobs</Button>
+                <Button className="mt-5" variant="outline" onClick={() => setStatus('all')}>{t('workspace.viewAllJobs')}</Button>
               ) : (
                 <Button className="mt-5" nativeButton={false} render={<Link to="/jobs/new" />}>
                   <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
-                  Create a job
+                  {t('workspace.createJob')}
                 </Button>
               )}
             </CardContent>
@@ -301,19 +313,19 @@ function MyJobsPage() {
                       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
                           <HugeiconsIcon icon={UserGroupIcon} className="size-4" />
-                          {job.proposalsCount || 0} {(job.proposalsCount || 0) === 1 ? 'proposal' : 'proposals'}
+                          {t('format.proposalsCount', { count: job.proposalsCount || 0 })}
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           <HugeiconsIcon icon={Calendar03Icon} className="size-4" />
-                          Created {formatDate(job.createdAt)}
+                          {t('workspace.createdOn', { date: formatDate(job.createdAt) })}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-3 border-t pt-4 sm:min-w-52 sm:items-end sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
-                      <div className="sm:text-right">
+                    <div className="flex shrink-0 flex-col gap-3 border-t pt-4 sm:min-w-52 sm:items-end sm:border-s sm:border-t-0 sm:ps-5 sm:pt-0">
+                      <div className="sm:text-end">
                         <p className="font-semibold">{formatBudget(job)}</p>
-                        <p className="mt-0.5 text-xs capitalize text-muted-foreground">{job.budgetType || 'fixed'} budget</p>
+                        <p className="mt-0.5 text-xs capitalize text-muted-foreground">{t('workspace.budgetTypeSuffix', { type: job.budgetType || 'fixed' })}</p>
                       </div>
                       <div className="flex w-full flex-wrap justify-end gap-2">
                         {['draft', 'open'].includes(job.status) ? (
@@ -323,7 +335,7 @@ function MyJobsPage() {
                             nativeButton={false}
                             render={<Link to={`/jobs/${job._id}/edit`} />}
                           >
-                            Edit
+                            {t('workspace.edit')}
                           </Button>
                         ) : null}
 
@@ -335,14 +347,14 @@ function MyJobsPage() {
                               disabled={Boolean(pendingAction)}
                               onClick={() => handleJobAction(job, 'delete')}
                             >
-                              {pendingAction === `delete:${job._id}` ? 'Deleting…' : 'Delete'}
+                              {pendingAction === `delete:${job._id}` ? t('workspace.deleting') : t('workspace.delete')}
                             </Button>
                             <Button
                               size="sm"
                               disabled={Boolean(pendingAction)}
                               onClick={() => handleJobAction(job, 'publish')}
                             >
-                              {pendingAction === `publish:${job._id}` ? 'Publishing…' : 'Publish job'}
+                              {pendingAction === `publish:${job._id}` ? t('workspace.publishing') : t('workspace.publishJob')}
                               <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                             </Button>
                           </>
@@ -355,7 +367,7 @@ function MyJobsPage() {
                             disabled={Boolean(pendingAction)}
                             onClick={() => handleJobAction(job, 'close')}
                           >
-                            {pendingAction === `close:${job._id}` ? 'Closing…' : 'Close job'}
+                            {pendingAction === `close:${job._id}` ? t('workspace.closing') : t('workspace.closeJob')}
                           </Button>
                         ) : null}
 
@@ -365,7 +377,7 @@ function MyJobsPage() {
                             disabled={Boolean(pendingAction)}
                             onClick={() => handleJobAction(job, 'reopen')}
                           >
-                            {pendingAction === `reopen:${job._id}` ? 'Reopening…' : 'Reopen job'}
+                            {pendingAction === `reopen:${job._id}` ? t('workspace.reopening') : t('workspace.reopenJob')}
                           </Button>
                         ) : null}
 
@@ -376,7 +388,7 @@ function MyJobsPage() {
                             nativeButton={false}
                             render={<Link to={`/jobs/${job._id}/proposals`} />}
                           >
-                            Review proposals
+                            {t('workspace.reviewProposals')}
                             <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                           </Button>
                         ) : null}
@@ -390,15 +402,15 @@ function MyJobsPage() {
         ) : null}
 
         {!loading && !error && pagination.totalPages > 1 ? (
-          <nav className="mt-7 flex items-center justify-between" aria-label="Jobs pagination">
+          <nav className="mt-7 flex items-center justify-between" aria-label={t('workspace.jobsPagination')}>
             <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
-              Previous
+              {t('common.previous')}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {pagination.page || page} of {pagination.totalPages}
+              {t('common.pageOfPlain', { page: pagination.page || page, total: pagination.totalPages })}
             </span>
             <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>
-              Next
+              {t('common.next')}
             </Button>
           </nav>
         ) : null}

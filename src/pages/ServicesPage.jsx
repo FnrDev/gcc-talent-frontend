@@ -1,72 +1,100 @@
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { PackageIcon } from '@hugeicons/core-free-icons'
+
 import ListingPage from '@/components/listing/ListingPage'
 import ServiceCard from '@/components/listing/ServiceCard'
 import useListingQuery from '@/components/listing/useListingQuery'
+import { Badge } from '@/components/ui/badge'
 import { getServices } from '@/services/serviceService'
 
 const FILTER_KEYS = ['search', 'deliveryDays', 'sort']
 
-const FILTERS = [
-  { key: 'search', type: 'search', placeholder: 'Search services, packages, or freelancers' },
-  {
-    key: 'deliveryDays',
-    type: 'select',
-    label: 'Any delivery time',
-    options: [
-      { value: '3', label: 'Up to 3 days' },
-      { value: '7', label: 'Up to 7 days' },
-      { value: '14', label: 'Up to 14 days' },
-    ],
-  },
-  {
-    key: 'sort',
-    type: 'select',
-    label: 'Recommended',
-    options: [
-      { value: 'newest', label: 'Newest first' },
-      { value: 'delivery', label: 'Fastest delivery' },
-      { value: 'rating', label: 'Highest rated' },
-    ],
-  },
-]
-
-const SEO = {
-  title: 'Buying services on GCC Talents',
-  paragraphs: [
-    'A service groups one or more packages from the same freelancer. Compare each package by scope, price, delivery time, revisions, and included features before deciding which option fits your project.',
-    'Package prices can use different supported currencies, so every card and package displays its own currency. Delivery estimates and revision counts are supplied by the freelancer and should be reviewed alongside the package description.',
-    'Ratings summarize marketplace reviews attached to the freelancer. Consider both the score and the number of reviews when comparing services.',
-  ],
-}
-
-const PROMO = {
-  eyebrow: 'For freelancers',
-  title: 'Turn your packages into a service',
-  description: 'Create focused packages with clear prices, delivery times, and included features.',
-  actionLabel: 'Create a service',
-  actionTo: '/services/new',
-}
-
 function ServicesPage() {
+  const { t } = useTranslation()
+
   const listing = useListingQuery({
     fetcher: getServices,
     resultKey: 'services',
     filterKeys: FILTER_KEYS,
-    limit: 9,
+    limit: 8,
   })
+
+  // Rebuilt when the language changes so option labels follow the switcher.
+  const filters = useMemo(
+    () => [
+      {
+        key: 'search',
+        type: 'search',
+        placeholder: t('services.searchPlaceholder'),
+        buttonLabel: t('services.searchButton'),
+      },
+      {
+        key: 'deliveryDays',
+        type: 'select',
+        title: t('services.deliveryTime'),
+        label: t('services.anyDeliveryTime'),
+        options: [
+          { value: '3', label: t('services.upTo3') },
+          { value: '7', label: t('services.upTo7') },
+          { value: '14', label: t('services.upTo14') },
+        ],
+      },
+      {
+        key: 'sort',
+        type: 'select',
+        title: t('services.sortBy'),
+        label: t('services.recommended'),
+        options: [
+          { value: 'newest', label: t('services.newestFirst') },
+          { value: 'delivery', label: t('services.fastestDelivery') },
+          { value: 'rating', label: t('services.highestRated') },
+        ],
+      },
+    ],
+    [t],
+  )
+
+  const seo = useMemo(
+    () => ({
+      title: t('services.seoTitle'),
+      paragraphs: [t('services.seoP1'), t('services.seoP2'), t('services.seoP3')],
+    }),
+    [t],
+  )
+
+  const promo = useMemo(
+    () => ({
+      eyebrow: t('services.promoEyebrow'),
+      title: t('services.promoTitle'),
+      description: t('services.promoDescription'),
+      actionLabel: t('services.promoAction'),
+      actionTo: '/services/new',
+    }),
+    [t],
+  )
 
   return (
     <ListingPage
-      title="Browse services"
-      subtitle="Compare live packages offered by freelancers across the GCC."
-      noun="services"
+      badge={
+        <Badge variant="outline" className="mb-4 gap-1.5 px-3 py-1">
+          <HugeiconsIcon icon={PackageIcon} strokeWidth={2} />
+          {t('services.badge')}
+        </Badge>
+      }
+      title={t('services.title')}
+      subtitle={t('services.subtitle')}
+      resultsTitle={t('services.resultsTitle')}
+      nounKey="listing.nounServices"
       listing={listing}
-      filterDefinitions={FILTERS}
+      filterDefinitions={filters}
       renderItem={(service) => <ServiceCard key={service._id} service={service} />}
       withMedia
-      emptyTitle="No services match your filters"
-      emptyDescription="Try a different search or a longer delivery window."
-      seo={SEO}
-      promo={PROMO}
+      emptyTitle={t('services.emptyTitle')}
+      emptyDescription={t('services.emptyDescription')}
+      seo={seo}
+      promo={promo}
     />
   )
 }

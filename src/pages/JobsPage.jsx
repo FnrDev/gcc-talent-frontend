@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  Briefcase02Icon,
   CheckmarkCircle02Icon,
   Clock01Icon,
   Location01Icon,
@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import BrowseLayout from '@/components/listing/BrowseLayout'
 import UserLink from '@/components/UserLink'
 import {
   Empty,
@@ -215,7 +216,7 @@ function JobCard({ job }) {
               showAvatar
               nameClassName="text-sm font-medium text-foreground"
             />
-            <div className="mt-1 pl-8">
+            <div className="mt-1 ps-8">
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 {clientLocation ? (
                   <>
@@ -274,6 +275,7 @@ function JobCardSkeleton() {
 function JobsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const queryString = searchParams.toString()
+  const { t } = useTranslation()
   const [filters, setFilters] = useState(() => filtersFromSearchParams(searchParams))
   const [appliedFilters, setAppliedFilters] = useState(() => filtersFromSearchParams(searchParams))
   const [categories, setCategories] = useState([])
@@ -414,281 +416,255 @@ function JobsPage() {
   }
 
   const filtersAreActive = Object.values(appliedFilters).some(Boolean)
-  const resultLabel = pagination.total === 1 ? '1 open job' : `${pagination.total || 0} open jobs`
+  const resultLabel = t('jobs.count', { count: pagination.total || 0 })
 
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] bg-muted/30">
-      <section className="border-b bg-background">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-          <Badge variant="outline" className="mb-4 gap-1.5 px-3 py-1">
-            <HugeiconsIcon icon={Briefcase02Icon} strokeWidth={2} />
-            GCC opportunities
-          </Badge>
-          <div className="max-w-3xl">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
-              Find work that fits your expertise
-            </h1>
-            <p className="mt-3 text-base leading-7 text-muted-foreground sm:text-lg">
-              Explore open projects from clients across the GCC, compare the scope, and send a focused proposal.
-            </p>
+    <BrowseLayout
+      title={t('jobs.title')}
+      subtitle={t('jobs.subtitle')}
+      search={
+        <form onSubmit={applyFilters} className="flex flex-col gap-2 sm:flex-row" role="search">
+          <div className="relative flex-1">
+            <HugeiconsIcon
+              icon={Search01Icon}
+              strokeWidth={2}
+              className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              className="h-11 ps-9"
+              placeholder={t('jobs.searchPlaceholder')}
+              aria-label={t('jobs.searchPlaceholder')}
+            />
           </div>
+          <Button type="submit" size="lg" className="h-11 px-5">
+            {t('jobs.searchButton')}
+          </Button>
+        </form>
+      }
+      filters={
+        <form onSubmit={applyFilters} className="grid gap-5">
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t('jobs.category')}
+            <NativeSelect
+              name="category"
+              value={filters.category}
+              onChange={handleFilterChange}
+              className="w-full"
+            >
+              <NativeSelectOption value="">{t('jobs.allCategories')}</NativeSelectOption>
+              {categories.map((category) => (
+                <NativeSelectOption key={category._id} value={category._id}>
+                  {category.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </label>
 
-          <form onSubmit={applyFilters} className="mt-7 flex max-w-3xl flex-col gap-2 sm:flex-row" role="search">
-            <div className="relative flex-1">
-              <HugeiconsIcon
-                icon={Search01Icon}
-                strokeWidth={2}
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                name="search"
-                value={filters.search}
-                onChange={handleFilterChange}
-                className="h-11 pl-9"
-                placeholder="Search by title or keyword"
-                aria-label="Search jobs"
-              />
-            </div>
-            <Button type="submit" size="lg" className="h-11 px-5">
-              Search jobs
-            </Button>
-          </form>
-        </div>
-      </section>
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">{t('jobs.skills')}</legend>
+            <div className="max-h-44 overflow-y-auto rounded-lg border p-2">
+              {skillsLoading ? (
+                <p className="px-1 py-2 text-xs text-muted-foreground">{t('jobs.loadingSkills')}</p>
+              ) : skills.length ? (
+                <div className="flex flex-wrap gap-1.5" aria-label={t('jobs.filterBySkills')}>
+                  {skills.map((skill) => {
+                    const selected = filters.skillIds.split(',').filter(Boolean).includes(skill._id)
 
-      <div className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-20">
-          <Card>
-            <CardHeader className="border-b">
-              <CardTitle className="text-base">Refine results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={applyFilters} className="grid gap-5">
-                <label className="grid gap-1.5 text-sm font-medium">
-                  Category
-                  <NativeSelect
-                    name="category"
-                    value={filters.category}
-                    onChange={handleFilterChange}
-                    className="w-full"
-                  >
-                    <NativeSelectOption value="">All categories</NativeSelectOption>
-                    {categories.map((category) => (
-                      <NativeSelectOption key={category._id} value={category._id}>
-                        {category.name}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                </label>
-
-                <fieldset className="grid gap-2">
-                  <legend className="text-sm font-medium">Skills</legend>
-                  <div className="max-h-44 overflow-y-auto rounded-lg border p-2">
-                    {skillsLoading ? (
-                      <p className="px-1 py-2 text-xs text-muted-foreground">Loading skills…</p>
-                    ) : skills.length ? (
-                      <div className="flex flex-wrap gap-1.5" aria-label="Filter by skills">
-                        {skills.map((skill) => {
-                          const selected = filters.skillIds.split(',').filter(Boolean).includes(skill._id)
-
-                          return (
-                            <button
-                              key={skill._id}
-                              type="button"
-                              aria-pressed={selected}
-                              onClick={() => toggleSkill(skill._id)}
-                              className="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-                            >
-                              {skill.name}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <p className="px-1 py-2 text-xs text-muted-foreground">No skills available.</p>
-                    )}
-                  </div>
-                </fieldset>
-
-                <label className="grid gap-1.5 text-sm font-medium">
-                  Budget type
-                  <NativeSelect
-                    name="budgetType"
-                    value={filters.budgetType}
-                    onChange={handleFilterChange}
-                    className="w-full"
-                  >
-                    <NativeSelectOption value="">Any budget type</NativeSelectOption>
-                    <NativeSelectOption value="fixed">Fixed price</NativeSelectOption>
-                    <NativeSelectOption value="hourly">Hourly rate</NativeSelectOption>
-                  </NativeSelect>
-                </label>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="grid gap-1.5 text-sm font-medium">
-                    Min budget
-                    <Input
-                      name="budgetMin"
-                      type="number"
-                      min="0"
-                      step="0.001"
-                      inputMode="decimal"
-                      value={filters.budgetMin}
-                      onChange={handleFilterChange}
-                      placeholder="0"
-                    />
-                  </label>
-                  <label className="grid gap-1.5 text-sm font-medium">
-                    Max budget
-                    <Input
-                      name="budgetMax"
-                      type="number"
-                      min="0"
-                      step="0.001"
-                      inputMode="decimal"
-                      value={filters.budgetMax}
-                      onChange={handleFilterChange}
-                      placeholder="Any"
-                    />
-                  </label>
+                    return (
+                      <button
+                        key={skill._id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleSkill(skill._id)}
+                        className="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                      >
+                        {skill.name}
+                      </button>
+                    )
+                  })}
                 </div>
-
-                <label className="grid gap-1.5 text-sm font-medium">
-                  Experience
-                  <NativeSelect
-                    name="experienceLevel"
-                    value={filters.experienceLevel}
-                    onChange={handleFilterChange}
-                    className="w-full"
-                  >
-                    <NativeSelectOption value="">Any level</NativeSelectOption>
-                    <NativeSelectOption value="entry">Entry level</NativeSelectOption>
-                    <NativeSelectOption value="intermediate">Intermediate</NativeSelectOption>
-                    <NativeSelectOption value="expert">Expert</NativeSelectOption>
-                  </NativeSelect>
-                </label>
-
-                <label className="grid gap-1.5 text-sm font-medium">
-                  Date posted
-                  <NativeSelect
-                    name="datePosted"
-                    value={filters.datePosted}
-                    onChange={handleFilterChange}
-                    className="w-full"
-                  >
-                    <NativeSelectOption value="">Any time</NativeSelectOption>
-                    <NativeSelectOption value="24h">Past 24 hours</NativeSelectOption>
-                    <NativeSelectOption value="7d">Past 7 days</NativeSelectOption>
-                    <NativeSelectOption value="30d">Past 30 days</NativeSelectOption>
-                  </NativeSelect>
-                </label>
-
-                <label className="grid gap-1.5 text-sm font-medium">
-                  Sort by
-                  <NativeSelect
-                    name="sort"
-                    value={filters.sort}
-                    onChange={handleFilterChange}
-                    className="w-full"
-                  >
-                    <NativeSelectOption value="">Newest first</NativeSelectOption>
-                    <NativeSelectOption value="budget_high">Budget: high to low</NativeSelectOption>
-                    <NativeSelectOption value="budget_low">Budget: low to high</NativeSelectOption>
-                  </NativeSelect>
-                </label>
-
-                <Button type="submit" className="w-full">Apply filters</Button>
-                {filtersAreActive ? (
-                  <Button type="button" variant="ghost" className="w-full" onClick={clearFilters}>
-                    Clear filters
-                  </Button>
-                ) : null}
-              </form>
-            </CardContent>
-          </Card>
-        </aside>
-
-        <section aria-labelledby="jobs-heading" className="min-w-0">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h2 id="jobs-heading" className="text-xl font-semibold">Open jobs</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground" aria-live="polite">
-                {loading ? 'Finding the latest opportunities…' : resultLabel}
-              </p>
+              ) : (
+                <p className="px-1 py-2 text-xs text-muted-foreground">{t('jobs.noSkills')}</p>
+              )}
             </div>
-            {!loading && !error ? (
-              <Button variant="outline" size="sm" onClick={loadJobs} aria-label="Refresh jobs">
-                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
-            ) : null}
+          </fieldset>
+
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t('jobs.budgetType')}
+            <NativeSelect
+              name="budgetType"
+              value={filters.budgetType}
+              onChange={handleFilterChange}
+              className="w-full"
+            >
+              <NativeSelectOption value="">{t('jobs.anyBudgetType')}</NativeSelectOption>
+              <NativeSelectOption value="fixed">{t('jobs.fixedPrice')}</NativeSelectOption>
+              <NativeSelectOption value="hourly">{t('jobs.hourlyRate')}</NativeSelectOption>
+            </NativeSelect>
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="grid gap-1.5 text-sm font-medium">
+              {t('jobs.minBudget')}
+              <Input
+                name="budgetMin"
+                type="number"
+                min="0"
+                step="0.001"
+                inputMode="decimal"
+                value={filters.budgetMin}
+                onChange={handleFilterChange}
+                placeholder="0"
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium">
+              {t('jobs.maxBudget')}
+              <Input
+                name="budgetMax"
+                type="number"
+                min="0"
+                step="0.001"
+                inputMode="decimal"
+                value={filters.budgetMax}
+                onChange={handleFilterChange}
+                placeholder={t('jobs.any')}
+              />
+            </label>
           </div>
 
-          {error ? (
-            <Alert variant="destructive">
-              <AlertTitle>Jobs are unavailable</AlertTitle>
-              <AlertDescription className="flex flex-wrap items-center gap-3">
-                <span>{error}</span>
-                <Button type="button" size="sm" variant="outline" onClick={loadJobs}>
-                  Try again
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : loading ? (
-            <div className="grid gap-4">
-              {Array.from({ length: 3 }, (_, index) => <JobCardSkeleton key={index} />)}
-            </div>
-          ) : jobs.length ? (
-            <div className="grid gap-4">
-              {jobs.map((job) => <JobCard key={job._id} job={job} />)}
-            </div>
-          ) : (
-            <Card>
-              <Empty className="min-h-72">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-                  </EmptyMedia>
-                  <EmptyTitle>No matching jobs</EmptyTitle>
-                  <EmptyDescription>
-                    Try a broader keyword or remove one of your filters.
-                  </EmptyDescription>
-                </EmptyHeader>
-                {filtersAreActive ? (
-                  <EmptyContent>
-                    <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
-                  </EmptyContent>
-                ) : null}
-              </Empty>
-            </Card>
-          )}
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t('jobs.experience')}
+            <NativeSelect
+              name="experienceLevel"
+              value={filters.experienceLevel}
+              onChange={handleFilterChange}
+              className="w-full"
+            >
+              <NativeSelectOption value="">{t('jobs.anyLevel')}</NativeSelectOption>
+              <NativeSelectOption value="entry">{t('jobs.entryLevel')}</NativeSelectOption>
+              <NativeSelectOption value="intermediate">{t('jobs.intermediate')}</NativeSelectOption>
+              <NativeSelectOption value="expert">{t('jobs.expert')}</NativeSelectOption>
+            </NativeSelect>
+          </label>
 
-          {!loading && !error && pagination.totalPages > 1 ? (
-            <nav className="mt-6 flex items-center justify-between gap-4" aria-label="Job result pages">
-              <Button
-                variant="outline"
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={page <= 1}
-              >
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page <span className="font-medium text-foreground">{pagination.page}</span> of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
-                disabled={page >= pagination.totalPages}
-              >
-                Next
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
-              </Button>
-            </nav>
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t('jobs.datePosted')}
+            <NativeSelect
+              name="datePosted"
+              value={filters.datePosted}
+              onChange={handleFilterChange}
+              className="w-full"
+            >
+              <NativeSelectOption value="">{t('jobs.anyTime')}</NativeSelectOption>
+              <NativeSelectOption value="24h">{t('jobs.past24h')}</NativeSelectOption>
+              <NativeSelectOption value="7d">{t('jobs.past7d')}</NativeSelectOption>
+              <NativeSelectOption value="30d">{t('jobs.past30d')}</NativeSelectOption>
+            </NativeSelect>
+          </label>
+
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t('jobs.sortBy')}
+            <NativeSelect
+              name="sort"
+              value={filters.sort}
+              onChange={handleFilterChange}
+              className="w-full"
+            >
+              <NativeSelectOption value="">{t('jobs.newestFirst')}</NativeSelectOption>
+              <NativeSelectOption value="budget_high">{t('jobs.budgetHighToLow')}</NativeSelectOption>
+              <NativeSelectOption value="budget_low">{t('jobs.budgetLowToHigh')}</NativeSelectOption>
+            </NativeSelect>
+          </label>
+
+          <Button type="submit" className="w-full">{t('common.applyFilters')}</Button>
+          {filtersAreActive ? (
+            <Button type="button" variant="ghost" className="w-full" onClick={clearFilters}>
+              {t('common.clearFilters')}
+            </Button>
           ) : null}
-        </section>
-      </div>
-    </main>
+        </form>
+      }
+      resultsTitle={t('jobs.resultsTitle')}
+      resultsSummary={loading ? t('jobs.finding') : resultLabel}
+      resultsAction={
+        !loading && !error ? (
+          <Button variant="outline" size="sm" onClick={loadJobs} aria-label={t('jobs.refreshLabel')}>
+            <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
+            <span className="hidden sm:inline">{t('common.refresh')}</span>
+          </Button>
+        ) : null
+      }
+    >
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>{t('jobs.unavailableTitle')}</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            <span>{error}</span>
+            <Button type="button" size="sm" variant="outline" onClick={loadJobs}>
+              {t('common.tryAgain')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : loading ? (
+        <div className="grid gap-4">
+          {Array.from({ length: 3 }, (_, index) => <JobCardSkeleton key={index} />)}
+        </div>
+      ) : jobs.length ? (
+        <div className="grid gap-4">
+          {jobs.map((job) => <JobCard key={job._id} job={job} />)}
+        </div>
+      ) : (
+        <Card>
+          <Empty className="min-h-72">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+              </EmptyMedia>
+              <EmptyTitle>{t('jobs.emptyTitle')}</EmptyTitle>
+              <EmptyDescription>
+                {t('jobs.emptyDescription')}
+              </EmptyDescription>
+            </EmptyHeader>
+            {filtersAreActive ? (
+              <EmptyContent>
+                <Button variant="outline" onClick={clearFilters}>{t('common.clearFilters')}</Button>
+              </EmptyContent>
+            ) : null}
+          </Empty>
+        </Card>
+      )}
+
+      {!loading && !error && pagination.totalPages > 1 ? (
+        <nav className="mt-6 flex items-center justify-between gap-4" aria-label={t('jobs.pagesLabel')}>
+          <Button
+            variant="outline"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={page <= 1}
+          >
+            <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+            {t('common.previous')}
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            <Trans
+              i18nKey="common.pageOf"
+              values={{ page: pagination.page, total: pagination.totalPages }}
+              components={[<span key="0" className="font-medium text-foreground" />]}
+            />
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+            disabled={page >= pagination.totalPages}
+          >
+            {t('common.next')}
+            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+          </Button>
+        </nav>
+      ) : null}
+    </BrowseLayout>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { requestPasswordReset } from '../services/authService'
 import BrandLogo from '@/components/BrandLogo'
@@ -17,6 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 
 function ForgotPasswordPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState('')
   const [error, setError] = useState('')
@@ -32,7 +34,7 @@ function ForgotPasswordPage() {
     const normalizedEmail = email.trim()
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setEmailError('Enter a valid email address.')
+      setEmailError(t('auth.invalidEmail'))
       return
     }
 
@@ -47,7 +49,7 @@ function ForgotPasswordPage() {
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ||
-          'We could not request a reset link. Check your connection and try again.',
+          t('auth.resetRequestFailed'),
       )
     } finally {
       requestPending.current = false
@@ -60,11 +62,11 @@ function ForgotPasswordPage() {
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="gap-2 text-center">
           <BrandLogo className="mx-auto mb-1 size-10" />
-          <CardTitle className="text-2xl">{sent ? 'Check your email' : 'Forgot your password?'}</CardTitle>
+          <CardTitle className="text-2xl">{sent ? t('auth.checkEmail') : t('auth.forgotTitle')}</CardTitle>
           <CardDescription>
             {sent
-              ? 'Follow the link in your email to choose a new password.'
-              : 'Enter your account email and we will send you a password reset link.'}
+              ? t('auth.checkEmailSubtitle')
+              : t('auth.forgotSubtitle')}
           </CardDescription>
         </CardHeader>
 
@@ -73,19 +75,18 @@ function ForgotPasswordPage() {
             <div className="space-y-5">
               <Alert role="status">
                 <AlertDescription>
-                  If an account with that email exists, you will receive a password reset link shortly.
+                  {t('auth.resetSentNotice')}
                 </AlertDescription>
               </Alert>
               <p className="text-sm text-muted-foreground">
-                Reset links expire after 30 minutes. If you do not see the email, check your
-                spam folder or wait a minute before requesting another link.
+                {t('auth.resetExpiryNote')}
               </p>
               <Button
                 className="h-10 w-full"
                 variant="outline"
                 onClick={() => setSent(false)}
               >
-                Request another link
+                {t('auth.requestAnotherLink')}
               </Button>
             </div>
           ) : (
@@ -98,7 +99,7 @@ function ForgotPasswordPage() {
                 ) : null}
 
                 <Field data-invalid={Boolean(emailError) || undefined}>
-                  <FieldLabel htmlFor="reset-email">Email address</FieldLabel>
+                  <FieldLabel htmlFor="reset-email">{t('auth.emailAddress')}</FieldLabel>
                   <Input
                     id="reset-email"
                     name="email"
@@ -125,7 +126,7 @@ function ForgotPasswordPage() {
                   className="h-10 w-full"
                   disabled={submitting || !email.trim()}
                 >
-                  {submitting ? <><Spinner /> Sending reset link…</> : 'Send reset link'}
+                  {submitting ? <><Spinner /> {t('auth.sendingResetLink')}</> : t('auth.sendResetLink')}
                 </Button>
               </FieldGroup>
             </form>
@@ -134,7 +135,7 @@ function ForgotPasswordPage() {
 
         <CardFooter className="justify-center text-sm">
           <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/sign-in">
-            Back to sign in
+            {t('auth.backToSignIn')}
           </Link>
         </CardFooter>
       </Card>
