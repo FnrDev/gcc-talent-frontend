@@ -1,13 +1,17 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Agreement01Icon,
   Briefcase02Icon,
+  Cancel01Icon,
   DashboardSquare01Icon,
   Edit02Icon,
   JobSearchIcon,
   Logout01Icon,
   FileSearchIcon,
+  Menu02Icon,
   PackageAddIcon,
   PackageCheckIcon,
   Search01Icon,
@@ -17,6 +21,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { useAuth } from '../context/AuthContext'
 import BrandLogo from '@/components/BrandLogo'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -34,28 +39,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { resolveCategoryIcon } from '@/components/landing/categories'
 import { useCategories } from '@/context/CategoryContext'
+import { cn } from '@/lib/utils'
 
 const clientLinks = [
-  { label: 'Post a Job', to: '/jobs/new', roles: ['client'], showToGuests: true },
-  { label: 'My Jobs', to: '/jobs/mine', roles: ['client'] },
-  { label: 'My Orders', to: '/orders', roles: ['client'] },
-  { label: 'My Contracts', to: '/contracts', roles: ['client'] },
-  { label: 'Wallet', to: '/wallet', roles: ['client'] },
-  { label: 'Browse Services', to: '/services' },
-  { label: 'Browse Freelancers', to: '/search?type=freelancers' },
-  { label: 'How it Works', to: '/#how-it-works' },
+  { labelKey: 'links.postJob', to: '/jobs/new', roles: ['client'], showToGuests: true },
+  { labelKey: 'links.myJobs', to: '/jobs/mine', roles: ['client'] },
+  { labelKey: 'links.myOrders', to: '/orders', roles: ['client'] },
+  { labelKey: 'links.myContracts', to: '/contracts', roles: ['client'] },
+  { labelKey: 'links.wallet', to: '/wallet', roles: ['client'] },
+  { labelKey: 'links.browseServices', to: '/services' },
+  { labelKey: 'links.browseFreelancers', to: '/search?type=freelancers' },
+  { labelKey: 'links.howItWorks', to: '/#how-it-works' },
 ]
 
 const freelancerLinks = [
-  { label: 'Browse Jobs', to: '/jobs' },
-  { label: 'Create a Service', to: '/services/new', roles: ['freelancer'] },
-  { label: 'My Proposals', to: '/proposals', roles: ['freelancer'] },
-  { label: 'My Contracts', to: '/contracts', roles: ['freelancer'] },
-  { label: 'Wallet', to: '/wallet', roles: ['freelancer'] },
-  { label: 'Become a Freelancer', to: '/sign-up', guestOnly: true },
-  { label: 'How it Works', to: '/#how-it-works' },
+  { labelKey: 'links.browseJobs', to: '/jobs' },
+  { labelKey: 'links.createService', to: '/services/new', roles: ['freelancer'] },
+  { labelKey: 'links.myProposals', to: '/proposals', roles: ['freelancer'] },
+  { labelKey: 'links.myContracts', to: '/contracts', roles: ['freelancer'] },
+  { labelKey: 'links.wallet', to: '/wallet', roles: ['freelancer'] },
+  { labelKey: 'links.becomeFreelancer', to: '/sign-up', guestOnly: true },
+  { labelKey: 'links.howItWorks', to: '/#how-it-works' },
+]
+
+// The four destinations the pill shows as plain links on mobile, where the
+// mega-menus collapse into the sheet.
+const primaryLinks = [
+  { labelKey: 'nav.services', to: '/services' },
+  { labelKey: 'nav.jobs', to: '/jobs' },
+  { labelKey: 'links.browseFreelancers', to: '/search?type=freelancers' },
+  { labelKey: 'links.howItWorks', to: '/#how-it-works' },
 ]
 
 function linkIsVisible(link, user) {
@@ -65,8 +88,21 @@ function linkIsVisible(link, user) {
 }
 
 function Navbar() {
+  const { t } = useTranslation()
   const { logout, user } = useAuth()
   const { categories, loading: categoriesLoading, error: categoriesError, refreshCategories } = useCategories()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  // The pill only deepens its shadow on scroll — it never changes colour, so it
+  // reads the same over the hero's blue as it does over paper.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 16)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   const avatarFallback = user?.name
     ?.split(/\s+/)
     .filter(Boolean)
@@ -75,41 +111,56 @@ function Navbar() {
     .join('')
     .toUpperCase() || 'GT'
   const roleLabel = user?.role === 'client'
-    ? 'Client account'
+    ? t('nav.clientAccount')
     : user?.role === 'freelancer'
-      ? 'Freelancer account'
-      : 'Administrator'
+      ? t('nav.freelancerAccount')
+      : t('nav.administrator')
+
+  const closeMenu = () => setMenuOpen(false)
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-      <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <div className="flex min-w-0 items-center gap-6">
-          <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold text-foreground">
+    // A floating pill rather than a full-width bar: it reads as an object on the
+    // page, so the same header works over the hero's blue and over paper without
+    // needing two colour schemes.
+    <header className="sticky top-0 z-40 w-full px-4 pt-8">
+      <div
+        className={cn(
+          'mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 rounded-full bg-white/95 ps-4 pe-2 ring-1 ring-ink/5 backdrop-blur-md transition-shadow duration-300',
+          scrolled
+            ? 'shadow-[0_12px_36px_-14px_rgba(6,24,43,0.45)]'
+            : 'shadow-[0_8px_26px_-16px_rgba(6,24,43,0.4)]',
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-4">
+          <Link
+            to="/"
+            className="flex shrink-0 items-center gap-2 font-display text-base font-bold text-foreground"
+          >
             <BrandLogo className="size-7" alt="" />
-            GCC Talents
+            {t('nav.brand')}
           </Link>
 
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>Categories</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className="rounded-full">{t('nav.categories')}</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid max-h-80 w-80 grid-cols-1 gap-1 overflow-y-auto p-1 sm:w-96 sm:grid-cols-2">
                       {categoriesLoading ? (
                         <li className="col-span-full px-3 py-4 text-sm text-muted-foreground" aria-live="polite">
-                          Loading categories…
+                          {t('nav.loadingCategories')}
                         </li>
                       ) : categoriesError ? (
                         <li className="col-span-full flex items-center justify-between gap-3 px-3 py-2">
-                          <span className="text-sm text-muted-foreground">Categories unavailable</span>
+                          <span className="text-sm text-muted-foreground">{t('nav.categoriesUnavailable')}</span>
                           <Button type="button" size="xs" variant="ghost" onClick={refreshCategories}>
-                            Try again
+                            {t('common.tryAgain')}
                           </Button>
                         </li>
                       ) : categories.length === 0 ? (
                         <li className="col-span-full px-3 py-4 text-sm text-muted-foreground">
-                          No categories available
+                          {t('nav.noCategories')}
                         </li>
                       ) : categories.map((category) => (
                         <li key={category._id || category.slug || category.name}>
@@ -126,21 +177,25 @@ function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuLink render={<Link to="/services" />}>Services</NavigationMenuLink>
+                  <NavigationMenuLink className="rounded-full" render={<Link to="/services" />}>
+                    {t('nav.services')}
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuLink render={<Link to="/jobs" />}>Jobs</NavigationMenuLink>
+                  <NavigationMenuLink className="rounded-full" render={<Link to="/jobs" />}>
+                    {t('nav.jobs')}
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>For Clients</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className="rounded-full">{t('nav.forClients')}</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="w-56 p-1">
                       {clientLinks.filter((link) => linkIsVisible(link, user)).map((link) => (
-                        <li key={link.label}>
+                        <li key={link.labelKey}>
                           <NavigationMenuLink render={<Link to={link.to} />}>
-                            {link.label}
+                            {t(link.labelKey)}
                           </NavigationMenuLink>
                         </li>
                       ))}
@@ -149,13 +204,13 @@ function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>For Freelancers</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className="rounded-full">{t('nav.forFreelancers')}</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="w-56 p-1">
                       {freelancerLinks.filter((link) => linkIsVisible(link, user)).map((link) => (
-                        <li key={link.label}>
+                        <li key={link.labelKey}>
                           <NavigationMenuLink render={<Link to={link.to} />}>
-                            {link.label}
+                            {t(link.labelKey)}
                           </NavigationMenuLink>
                         </li>
                       ))}
@@ -167,22 +222,25 @@ function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <LanguageSwitcher className="hidden rounded-full sm:inline-flex" />
+
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full"
             nativeButton={false}
-            render={<Link to="/search" aria-label="Search the marketplace" />}
+            render={<Link to="/search" aria-label={t('nav.searchMarketplace')} />}
           >
             <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-            <span className="sr-only">Search the marketplace</span>
+            <span className="sr-only">{t('nav.searchMarketplace')}</span>
           </Button>
 
           {user ? (
             <DropdownMenu>
             <DropdownMenuTrigger
               className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              aria-label={`Open account menu for ${user.name}`}
+              aria-label={t('nav.openAccountMenu', { name: user.name })}
             >
               <Avatar size="sm">
                 {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt="" /> : null}
@@ -200,27 +258,27 @@ function Navbar() {
                 <>
                   <DropdownMenuItem render={<Link to={`/profile/${user._id}`} />}>
                     <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} />
-                    View Profile
+                    {t('nav.viewProfile')}
                   </DropdownMenuItem>
                   <DropdownMenuItem render={<Link to="/profile/edit" />}>
                     <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} />
-                    Edit Profile
+                    {t('nav.editProfile')}
                   </DropdownMenuItem>
                 </>
               ) : null}
               <DropdownMenuItem render={<Link to="/dashboard" />}>
                 <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />
-                Dashboard
+                {t('nav.dashboard')}
               </DropdownMenuItem>
               {user.role === 'client' || user.role === 'freelancer' ? (
                 <>
                   <DropdownMenuItem render={<Link to="/contracts" />}>
                     <HugeiconsIcon icon={Agreement01Icon} strokeWidth={2} />
-                    My Contracts
+                    {t('links.myContracts')}
                   </DropdownMenuItem>
                   <DropdownMenuItem render={<Link to="/wallet" />}>
                     <HugeiconsIcon icon={Wallet02Icon} strokeWidth={2} />
-                    Wallet
+                    {t('links.wallet')}
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -228,15 +286,15 @@ function Navbar() {
                 <>
                   <DropdownMenuItem render={<Link to="/jobs/new" />}>
                     <HugeiconsIcon icon={Briefcase02Icon} strokeWidth={2} />
-                    Post a Job
+                    {t('links.postJob')}
                   </DropdownMenuItem>
                   <DropdownMenuItem render={<Link to="/jobs/mine" />}>
                     <HugeiconsIcon icon={WorkHistoryIcon} strokeWidth={2} />
-                    My Jobs
+                    {t('links.myJobs')}
                   </DropdownMenuItem>
                   <DropdownMenuItem render={<Link to="/orders" />}>
                     <HugeiconsIcon icon={PackageCheckIcon} strokeWidth={2} />
-                    My Orders
+                    {t('links.myOrders')}
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -244,43 +302,161 @@ function Navbar() {
                 <>
                   <DropdownMenuItem render={<Link to="/jobs" />}>
                     <HugeiconsIcon icon={JobSearchIcon} strokeWidth={2} />
-                    Browse Jobs
+                    {t('links.browseJobs')}
                   </DropdownMenuItem>
                   <DropdownMenuItem render={<Link to="/services/new" />}>
                     <HugeiconsIcon icon={PackageAddIcon} strokeWidth={2} />
-                    Create a Service
+                    {t('links.createService')}
                   </DropdownMenuItem>
                   <DropdownMenuItem render={<Link to="/proposals" />}>
                     <HugeiconsIcon icon={FileSearchIcon} strokeWidth={2} />
-                    My Proposals
+                    {t('links.myProposals')}
                   </DropdownMenuItem>
                 </>
               ) : null}
               {user.role === 'admin' ? (
                 <DropdownMenuItem render={<Link to="/admin" />}>
                   <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} />
-                  Admin Panel
+                  {t('nav.adminPanel')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={logout}>
                 <HugeiconsIcon icon={Logout01Icon} strokeWidth={2} />
-                Sign Out
+                {t('common.signOut')}
               </DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" nativeButton={false} render={<Link to="/sign-in" />}>
-                Sign In
+            <div className="hidden items-center gap-1.5 sm:flex">
+              <Button variant="ghost" className="rounded-full px-3.5" nativeButton={false} render={<Link to="/sign-in" />}>
+                {t('common.signIn')}
               </Button>
-              <Button nativeButton={false} render={<Link to="/sign-up" />}>
-                Join
+              <Button
+                className="rounded-full bg-ink px-4 text-white hover:bg-ink/90"
+                nativeButton={false}
+                render={<Link to="/sign-up" />}
+              >
+                {t('common.join')}
               </Button>
             </div>
           )}
+
+          {/* Everything above collapses below `lg`, so the sheet is the only nav
+              on phones — the previous header offered none at all there. */}
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger
+              render={
+                <Button variant="ghost" size="icon" className="rounded-full lg:hidden" aria-label={t('nav.openMenu')} />
+              }
+            >
+              <HugeiconsIcon icon={Menu02Icon} strokeWidth={2} />
+            </SheetTrigger>
+            <SheetContent side="right" showCloseButton={false} className="w-80 max-w-[88vw] gap-0 overflow-y-auto p-0">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <SheetTitle className="flex items-center gap-2 font-display text-base font-bold">
+                  <BrandLogo className="size-6" alt="" />
+                  {t('nav.brand')}
+                </SheetTitle>
+                <SheetClose
+                  render={<Button variant="ghost" size="icon-sm" aria-label={t('nav.closeMenu')} />}
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+                </SheetClose>
+              </div>
+              <SheetDescription className="sr-only">{t('nav.menu')}</SheetDescription>
+
+              <nav className="flex flex-col gap-1 p-3">
+                {primaryLinks.map((link) => (
+                  <Link
+                    key={link.labelKey}
+                    to={link.to}
+                    onClick={closeMenu}
+                    className="rounded-xl px-3 py-2.5 text-base text-foreground transition-colors hover:bg-vellum"
+                  >
+                    {t(link.labelKey)}
+                  </Link>
+                ))}
+              </nav>
+
+              {categories.length > 0 ? (
+                <div className="border-t border-border p-3">
+                  <p className="px-3 pb-2 text-xs font-medium text-muted-foreground">{t('nav.categories')}</p>
+                  <div className="flex flex-wrap gap-1.5 px-1">
+                    {categories.slice(0, 8).map((category) => (
+                      <Link
+                        key={category._id || category.slug || category.name}
+                        to={`/jobs?category=${encodeURIComponent(category._id)}`}
+                        onClick={closeMenu}
+                        className="rounded-full bg-vellum px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-accent"
+                      >
+                        {category.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="border-t border-border p-3">
+                <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">{t('nav.forClients')}</p>
+                {clientLinks.filter((link) => linkIsVisible(link, user)).map((link) => (
+                  <Link
+                    key={link.labelKey}
+                    to={link.to}
+                    onClick={closeMenu}
+                    className="block rounded-xl px-3 py-2 text-sm text-foreground transition-colors hover:bg-vellum"
+                  >
+                    {t(link.labelKey)}
+                  </Link>
+                ))}
+                <p className="mt-2 px-3 pb-1 text-xs font-medium text-muted-foreground">{t('nav.forFreelancers')}</p>
+                {freelancerLinks.filter((link) => linkIsVisible(link, user)).map((link) => (
+                  <Link
+                    key={link.labelKey}
+                    to={link.to}
+                    onClick={closeMenu}
+                    className="block rounded-xl px-3 py-2 text-sm text-foreground transition-colors hover:bg-vellum"
+                  >
+                    {t(link.labelKey)}
+                  </Link>
+                ))}
+              </div>
+
+              <div className="mt-auto flex flex-col gap-2 border-t border-border p-4">
+                <LanguageSwitcher className="w-full justify-start rounded-xl sm:hidden" />
+                {user ? (
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl"
+                    nativeButton={false}
+                    render={<Link to="/dashboard" onClick={closeMenu} />}
+                  >
+                    {t('nav.dashboard')}
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-xl"
+                      nativeButton={false}
+                      render={<Link to="/sign-in" onClick={closeMenu} />}
+                    >
+                      {t('common.signIn')}
+                    </Button>
+                    <Button
+                      className="flex-1 rounded-xl bg-ink text-white hover:bg-ink/90"
+                      nativeButton={false}
+                      render={<Link to="/sign-up" onClick={closeMenu} />}
+                    >
+                      {t('common.join')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
-      </nav>
+      </div>
     </header>
   )
 }

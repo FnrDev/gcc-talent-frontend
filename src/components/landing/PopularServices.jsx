@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -6,14 +7,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { resolveCategoryIcon, selectLandingCategories } from './categories'
 
 function PopularServices({ categories = [], loading = false }) {
+  const { t } = useTranslation()
   const visibleCategories = selectLandingCategories(categories)
 
   return (
     <section id="services" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-8">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Popular services</h2>
+        <h2 className="text-lg font-semibold text-foreground">{t('home.popularServices')}</h2>
         <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/services" />}>
-          Browse all services
+          {t('home.browseAllServices')}
         </Button>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -26,7 +28,7 @@ function PopularServices({ categories = [], loading = false }) {
           ))
         ) : visibleCategories.length === 0 ? (
           <Card className="col-span-full p-6 text-center text-sm text-muted-foreground">
-            No categories are available yet.
+            {t('home.noCategoriesYet')}
           </Card>
         ) : visibleCategories.map((category) => (
           <Link

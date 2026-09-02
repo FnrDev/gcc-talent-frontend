@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { SearchRemoveIcon, Alert02Icon } from '@hugeicons/core-free-icons'
 
@@ -12,7 +13,9 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 
-const GRID = 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'
+// Two across, not three: the results column now sits beside an 18rem filter
+// rail, so a third card would squeeze each one under ~270px.
+const GRID = 'grid grid-cols-1 gap-4 sm:grid-cols-2'
 
 function CardSkeleton({ withMedia }) {
   return (
@@ -23,7 +26,7 @@ function CardSkeleton({ withMedia }) {
       <div className="flex items-center gap-2 pt-2">
         <Skeleton className="size-6 rounded-full" />
         <Skeleton className="h-3 w-24" />
-        <Skeleton className="ml-auto h-4 w-14" />
+        <Skeleton className="ms-auto h-4 w-14" />
       </div>
     </div>
   )
@@ -33,7 +36,9 @@ function CardSkeleton({ withMedia }) {
  * Owns the four states a result grid can be in — loading, error, empty, and
  * populated — so neither browse page has to repeat them.
  */
-function ListingGrid({ items, loading, error, renderItem, withMedia = false, count = 6, onClear, emptyTitle, emptyDescription }) {
+function ListingGrid({ items, loading, error, renderItem, withMedia = false, count = 4, onClear, emptyTitle, emptyDescription }) {
+  const { t } = useTranslation()
+
   if (loading) {
     return (
       <div className={GRID} aria-busy="true" aria-live="polite">
@@ -51,12 +56,12 @@ function ListingGrid({ items, loading, error, renderItem, withMedia = false, cou
           <EmptyMedia variant="icon">
             <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} />
           </EmptyMedia>
-          <EmptyTitle>Couldn&apos;t load results</EmptyTitle>
+          <EmptyTitle>{t('listing.couldNotLoad')}</EmptyTitle>
           <EmptyDescription>{error}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button variant="outline" onClick={() => window.location.reload()}>
-            Try again
+            {t('common.tryAgain')}
           </Button>
         </EmptyContent>
       </Empty>
@@ -76,7 +81,7 @@ function ListingGrid({ items, loading, error, renderItem, withMedia = false, cou
         {onClear && (
           <EmptyContent>
             <Button variant="outline" onClick={onClear}>
-              Clear all filters
+              {t('common.clearAllFilters')}
             </Button>
           </EmptyContent>
         )}

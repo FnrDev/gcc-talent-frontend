@@ -1,4 +1,12 @@
+import i18n from '@/i18n'
+
 const currencyFormatters = new Map()
+
+// Gulf digital products overwhelmingly use Latin digits, so Arabic keeps the
+// `latn` numbering system rather than defaulting to Arabic-Indic (٠١٢٣).
+function localeTag() {
+  return i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en-US'
+}
 
 // The marketplace prices in Bahraini dinar. BHD subdivides into 1000 fils, so
 // Intl would render three decimals by default ("BHD 45.000"); listing prices
@@ -8,10 +16,11 @@ export const DEFAULT_CURRENCY = 'BHD'
 export function formatCurrency(amount, currency = DEFAULT_CURRENCY) {
   if (typeof amount !== 'number' || Number.isNaN(amount)) return '—'
 
-  if (!currencyFormatters.has(currency)) {
+  const cacheKey = `${localeTag()}:${currency}`
+  if (!currencyFormatters.has(cacheKey)) {
     currencyFormatters.set(
-      currency,
-      new Intl.NumberFormat('en-US', {
+      cacheKey,
+      new Intl.NumberFormat(localeTag(), {
         style: 'currency',
         currency,
         minimumFractionDigits: 0,
@@ -20,7 +29,7 @@ export function formatCurrency(amount, currency = DEFAULT_CURRENCY) {
     )
   }
 
-  return currencyFormatters.get(currency).format(amount)
+  return currencyFormatters.get(cacheKey).format(amount)
 }
 
 // "BHD 500 – BHD 2,000", "BHD 40/hr", or a single value when only one bound is set.
@@ -32,7 +41,9 @@ export function formatBudget({ budgetType, budgetMin, budgetMax, currency = DEFA
   }
 
   const single = budgetMin ?? budgetMax
-  return typeof single === 'number' ? `${formatCurrency(single, currency)}${suffix}` : 'Budget not set'
+  return typeof single === 'number'
+    ? `${formatCurrency(single, currency)}${suffix}`
+    : i18n.t('format.budgetNotSet')
 }
 
 const RELATIVE_UNITS = [
@@ -44,7 +55,15 @@ const RELATIVE_UNITS = [
   ['minute', 60],
 ]
 
-const relativeFormatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+const relativeFormatters = new Map()
+
+function relativeFormatter() {
+  const tag = localeTag()
+  if (!relativeFormatters.has(tag)) {
+    relativeFormatters.set(tag, new Intl.RelativeTimeFormat(tag, { numeric: 'auto' }))
+  }
+  return relativeFormatters.get(tag)
+}
 
 export function timeAgo(date) {
   if (!date) return ''
@@ -52,20 +71,20 @@ export function timeAgo(date) {
   const seconds = (new Date(date) - Date.now()) / 1000
   for (const [unit, secondsPerUnit] of RELATIVE_UNITS) {
     if (Math.abs(seconds) >= secondsPerUnit) {
-      return relativeFormatter.format(Math.round(seconds / secondsPerUnit), unit)
+      return relativeFormatter().format(Math.round(seconds / secondsPerUnit), unit)
     }
   }
-  return 'just now'
+  return i18n.t('format.justNow')
 }
 
 export function formatDate(date) {
   if (!date) return '—'
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(date))
+  return new Intl.DateTimeFormat(localeTag(), { dateStyle: 'medium' }).format(new Date(date))
 }
 
 export function formatDeliveryDays(days) {
   if (!days) return '—'
-  return days === 1 ? '1 day delivery' : `${days} days delivery`
+  return i18n.t('format.dayDelivery', { count: days })
 }
 
 export function initials(name = '') {
@@ -78,13 +97,23 @@ export function initials(name = '') {
     .toUpperCase()
 }
 
-export const EXPERIENCE_LABELS = {
-  entry: 'Entry level',
-  intermediate: 'Intermediate',
-  expert: 'Expert',
+const EXPERIENCE_KEYS = {
+  entry: 'jobs.entryLevel',
+  intermediate: 'jobs.intermediate',
+  expert: 'jobs.expert',
 }
 
-export const BUDGET_TYPE_LABELS = {
-  fixed: 'Fixed price',
-  hourly: 'Hourly',
+const BUDGET_TYPE_KEYS = {
+  fixed: 'jobs.fixedPrice',
+  hourly: 'format.hourly',
+}
+
+// Functions rather than constant maps: the label has to be resolved at render
+// time, after a language switch, not frozen at module load.
+export function experienceLabel(level) {
+  return EXPERIENCE_KEYS[level] ? i18n.t(EXPERIENCE_KEYS[level]) : i18n.t('jobs.anyLevel')
+}
+
+export function budgetTypeLabel(type) {
+  return BUDGET_TYPE_KEYS[type] ? i18n.t(BUDGET_TYPE_KEYS[type]) : ''
 }

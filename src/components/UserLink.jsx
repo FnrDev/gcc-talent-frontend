@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import { Link } from 'react-router'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -24,7 +25,7 @@ function UserLink({
   nameClassName,
 }) {
   const id = user?._id ?? user?.id
-  const name = user?.companyName || user?.name || 'Unknown user'
+  const name = user?.companyName || user?.name || i18n.t('reviews.unknownUser')
 
   const content = (
     <>

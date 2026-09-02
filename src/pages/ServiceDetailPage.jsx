@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -39,9 +40,9 @@ import { serviceGallery } from '@/lib/serviceArtwork'
 import { getService, getSimilarServices } from '@/services/serviceService'
 
 const SERVICE_NOTES = [
-  { icon: TaskDone01Icon, label: 'Package scope and features are listed before work begins' },
-  { icon: Clock01Icon, label: 'Delivery estimates are set by the freelancer' },
-  { icon: InformationCircleIcon, label: 'Demo checkout uses test card details only' },
+  { icon: TaskDone01Icon, labelKey: 'serviceDetail.noteScope' },
+  { icon: Clock01Icon, labelKey: 'serviceDetail.noteDelivery' },
+  { icon: InformationCircleIcon, labelKey: 'serviceDetail.noteDemo' },
 ]
 
 function DetailSkeleton() {
@@ -58,6 +59,7 @@ function DetailSkeleton() {
 }
 
 function PackagePanel({ pack, onOrder, orderLabel, orderDisabled }) {
+  const { t } = useTranslation()
   const features = Array.isArray(pack.features) ? pack.features : []
 
   return (
@@ -78,8 +80,8 @@ function PackagePanel({ pack, onOrder, orderLabel, orderDisabled }) {
 
       <SpecList
         rows={[
-          { icon: Clock01Icon, label: 'Delivery', value: `${pack.deliveryDays} days` },
-          { icon: RefreshIcon, label: 'Revisions', value: pack.revisions },
+          { icon: Clock01Icon, label: t('serviceDetail.delivery'), value: t('serviceDetail.deliveryDaysValue', { count: pack.deliveryDays }) },
+          { icon: RefreshIcon, label: t('serviceDetail.revisions'), value: pack.revisions },
         ]}
       />
 
@@ -98,7 +100,7 @@ function PackagePanel({ pack, onOrder, orderLabel, orderDisabled }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">No additional features are listed.</p>
+        <p className="text-sm text-muted-foreground">{t('serviceDetail.noFeatures')}</p>
       )}
 
       <Button
@@ -115,6 +117,7 @@ function PackagePanel({ pack, onOrder, orderLabel, orderDisabled }) {
 }
 
 function ServiceDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
@@ -128,16 +131,16 @@ function ServiceDetailPage() {
     ? selectedPackageId
     : packageIds[0]
   const seller = service?.freelancer
-  const location = [seller?.city, seller?.country].filter(Boolean).join(', ') || 'Not provided'
+  const location = [seller?.city, seller?.country].filter(Boolean).join(', ') || t('serviceDetail.notProvided')
   const rating = Number(service?.ratingAvg || 0)
   const canOrder = user?.role === 'client'
   const orderLabel = authLoading
-    ? 'Checking account…'
+    ? t('serviceDetail.checkingAccount')
     : !user
-      ? 'Sign in to order'
+      ? t('serviceDetail.signInToOrder')
       : canOrder
-        ? 'Order this package'
-        : 'Client account required'
+        ? t('serviceDetail.orderPackage')
+        : t('serviceDetail.clientRequired')
 
   function handleOrder(pack) {
     if (authLoading) return
@@ -146,7 +149,7 @@ function ServiceDetailPage() {
       navigate('/sign-in', {
         state: {
           from: `${routeLocation.pathname}${routeLocation.search}`,
-          message: 'Sign in with a client account to order this service.',
+          message: t('serviceDetail.signInMessage'),
         },
       })
       return
@@ -161,11 +164,11 @@ function ServiceDetailPage() {
         <Breadcrumb className="mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink render={<Link to="/" />}>Home</BreadcrumbLink>
+              <BreadcrumbLink render={<Link to="/" />}>{t('serviceDetail.home')}</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink render={<Link to="/services" />}>Services</BreadcrumbLink>
+              <BreadcrumbLink render={<Link to="/services" />}>{t('serviceDetail.services')}</BreadcrumbLink>
             </BreadcrumbItem>
             {service ? (
               <>
@@ -182,10 +185,10 @@ function ServiceDetailPage() {
 
         {error && !loading ? (
           <div className="rounded-xl p-8 text-center ring-1 ring-foreground/10">
-            <h1 className="font-heading text-lg font-semibold text-foreground">Service unavailable</h1>
+            <h1 className="font-heading text-lg font-semibold text-foreground">{t('serviceDetail.unavailable')}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{error}</p>
             <Button variant="outline" className="mt-4" nativeButton={false} render={<Link to="/services" />}>
-              Back to services
+              {t('serviceDetail.backToServices')}
             </Button>
           </div>
         ) : null}
@@ -207,7 +210,7 @@ function ServiceDetailPage() {
                     <span className="flex items-center gap-1 text-sm">
                       <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-4 text-primary" />
                       <span className="font-medium text-foreground">{rating.toFixed(1)}</span>
-                      <span className="text-muted-foreground">({service.ratingCount || 0} reviews)</span>
+                      <span className="text-muted-foreground">({t('serviceDetail.reviewsCount', { count: service.ratingCount || 0 })})</span>
                     </span>
                   </div>
                 </div>
@@ -216,12 +219,10 @@ function ServiceDetailPage() {
 
                 <section>
                   <h2 className="mb-2 font-heading text-lg font-semibold text-foreground">
-                    Choose a package
+                    {t('serviceDetail.choosePackage')}
                   </h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    This service includes {service.packages.length}{' '}
-                    {service.packages.length === 1 ? 'package' : 'packages'}. Compare the scope,
-                    delivery estimate, revisions, and price before contacting the freelancer.
+                    {t('serviceDetail.packageIntro', { count: service.packages.length })}
                   </p>
                 </section>
               </div>
@@ -250,16 +251,16 @@ function ServiceDetailPage() {
 
                 <SpecList
                   rows={[
-                    { icon: Location01Icon, label: 'Freelancer location', value: location },
-                    { icon: Clock01Icon, label: 'Fastest delivery', value: `${service.fastestDelivery} days` },
+                    { icon: Location01Icon, label: t('serviceDetail.freelancerLocation'), value: location },
+                    { icon: Clock01Icon, label: t('serviceDetail.fastestDelivery'), value: t('serviceDetail.deliveryDaysValue', { count: service.fastestDelivery }) },
                   ]}
                 />
 
                 <ul className="flex flex-col gap-2 rounded-xl p-3 ring-1 ring-foreground/10">
                   {SERVICE_NOTES.map((row) => (
-                    <li key={row.label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <li key={row.labelKey} className="flex items-center gap-2 text-sm text-muted-foreground">
                       <HugeiconsIcon icon={row.icon} strokeWidth={2} className="size-4 shrink-0 text-primary" />
-                      {row.label}
+                      {t(row.labelKey)}
                     </li>
                   ))}
                 </ul>
@@ -269,11 +270,11 @@ function ServiceDetailPage() {
             <ServiceReviews key={service._id} serviceId={service._id} />
 
             <SimilarGrid
-              title={`More from ${seller?.name || 'this freelancer'}`}
+              title={t('serviceDetail.moreFrom', { name: seller?.name || t('serviceDetail.thisFreelancer') })}
               items={similar || []}
               renderItem={(item) => <ServiceCard key={item._id} service={item} />}
               moreTo="/services"
-              moreLabel="Browse services"
+              moreLabel={t('serviceDetail.browseServices')}
             />
           </>
         ) : null}
@@ -291,10 +292,10 @@ function ServiceDetailPage() {
       ) : null}
 
       <PromoBanner
-        eyebrow="For freelancers"
-        title="Turn your packages into a service"
-        description="Create clear options with prices, delivery estimates, revisions, and included features."
-        actionLabel="Create a service"
+        eyebrow={t('services.promoEyebrow')}
+        title={t('services.promoTitle')}
+        description={t('serviceDetail.promoDescription')}
+        actionLabel={t('services.promoAction')}
         actionTo="/services/new"
       />
       <Footer />

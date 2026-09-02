@@ -33,8 +33,8 @@ import PromoBanner from '@/components/landing/PromoBanner'
 import Footer from '@/components/landing/Footer'
 import { getJob, getSimilarJobs } from '@/services/jobService'
 import {
-  BUDGET_TYPE_LABELS,
-  EXPERIENCE_LABELS,
+  budgetTypeLabel,
+  experienceLabel,
   formatBudget,
   formatDate,
   timeAgo,
@@ -107,7 +107,7 @@ function JobDetailPage() {
                 <div>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{job.category?.name}</Badge>
-                    <Badge variant="secondary">{BUDGET_TYPE_LABELS[job.budgetType]}</Badge>
+                    <Badge variant="secondary">{budgetTypeLabel(job.budgetType)}</Badge>
                     <span className="text-xs text-muted-foreground">Posted {timeAgo(job.createdAt)}</span>
                   </div>
                   <h1 className="font-heading text-2xl leading-snug font-semibold text-foreground">{job.title}</h1>
@@ -169,11 +169,11 @@ function JobDetailPage() {
 
                   <SpecList
                     rows={[
-                      { icon: Wallet01Icon, label: 'Budget type', value: BUDGET_TYPE_LABELS[job.budgetType] },
+                      { icon: Wallet01Icon, label: 'Budget type', value: budgetTypeLabel(job.budgetType) },
                       {
                         icon: Briefcase01Icon,
                         label: 'Experience',
-                        value: EXPERIENCE_LABELS[job.experienceLevel] ?? 'Any',
+                        value: experienceLabel(job.experienceLevel),
                       },
                       { icon: Time04Icon, label: 'Duration', value: job.duration ?? '—' },
                       job.deadline && {
@@ -240,6 +240,7 @@ function JobDetailPage() {
         description="Describe what you need and let qualified freelancers come to you."
         actionLabel="Post a Job"
         actionTo="/sign-up"
+        ramp="clay"
       />
       <Footer />
     </div>

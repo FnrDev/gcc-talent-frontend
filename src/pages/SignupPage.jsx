@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { signUp } from '../services/authService'
 import BrandLogo from '@/components/BrandLogo'
@@ -18,6 +19,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Spinner } from '@/components/ui/spinner'
 
 function SignupPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -63,12 +65,12 @@ function SignupPage() {
       })
       navigate('/sign-in', {
         replace: true,
-        state: { message: 'Your account is ready. Sign in to get started.' },
+        state: { message: t('auth.accountReady') },
       })
     } catch (requestError) {
       setError(
         requestError?.response?.data?.message ||
-          'We could not create your account. Please try again.',
+          t('auth.signUpFailed'),
       )
     } finally {
       setSubmitting(false)
@@ -80,9 +82,9 @@ function SignupPage() {
       <Card className="w-full max-w-lg shadow-sm">
         <CardHeader className="gap-2 text-center">
           <BrandLogo className="mx-auto mb-1 size-10" />
-          <CardTitle className="text-2xl">Join GCC Talents</CardTitle>
+          <CardTitle className="text-2xl">{t('auth.joinTitle')}</CardTitle>
           <CardDescription>
-            Create your account and start building trusted GCC connections.
+            {t('auth.joinSubtitle')}
           </CardDescription>
         </CardHeader>
 
@@ -97,13 +99,13 @@ function SignupPage() {
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field>
-                  <FieldLabel htmlFor="name">Full name</FieldLabel>
+                  <FieldLabel htmlFor="name">{t('auth.fullName')}</FieldLabel>
                   <Input
                     id="name"
                     name="name"
                     type="text"
                     autoComplete="name"
-                    placeholder="Your name"
+                    placeholder={t('auth.yourName')}
                     value={formData.name}
                     onChange={handleChange}
                     required
@@ -111,23 +113,23 @@ function SignupPage() {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="role">I want to</FieldLabel>
+                  <FieldLabel htmlFor="role">{t('auth.iWantTo')}</FieldLabel>
                   <NativeSelect
                     id="role"
                     name="role"
                     className="w-full"
                     value={formData.role}
                     onChange={handleChange}
-                    aria-label="Account type"
+                    aria-label={t('auth.accountType')}
                   >
-                    <NativeSelectOption value="freelancer">Find freelance work</NativeSelectOption>
-                    <NativeSelectOption value="client">Hire GCC talent</NativeSelectOption>
+                    <NativeSelectOption value="freelancer">{t('auth.findFreelanceWork')}</NativeSelectOption>
+                    <NativeSelectOption value="client">{t('auth.hireTalent')}</NativeSelectOption>
                   </NativeSelect>
                 </Field>
               </div>
 
               <Field>
-                <FieldLabel htmlFor="email">Email address</FieldLabel>
+                <FieldLabel htmlFor="email">{t('auth.emailAddress')}</FieldLabel>
                 <Input
                   id="email"
                   name="email"
@@ -141,7 +143,7 @@ function SignupPage() {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <FieldLabel htmlFor="password">{t('auth.password')}</FieldLabel>
                 <Input
                   id="password"
                   name="password"
@@ -152,11 +154,11 @@ function SignupPage() {
                   required
                   minLength={8}
                 />
-                <FieldDescription>Use 8 or more characters.</FieldDescription>
+                <FieldDescription>{t('auth.passwordHint')}</FieldDescription>
               </Field>
 
               <Field data-invalid={!passwordsMatch || undefined}>
-                <FieldLabel htmlFor="passwordConfirmation">Confirm password</FieldLabel>
+                <FieldLabel htmlFor="passwordConfirmation">{t('auth.confirmPassword')}</FieldLabel>
                 <Input
                   id="passwordConfirmation"
                   name="passwordConfirmation"
@@ -167,7 +169,7 @@ function SignupPage() {
                   aria-invalid={!passwordsMatch}
                   required
                 />
-                {!passwordsMatch ? <FieldError>Passwords do not match.</FieldError> : null}
+                {!passwordsMatch ? <FieldError>{t('auth.passwordsDoNotMatch')}</FieldError> : null}
               </Field>
 
               <Button
@@ -179,26 +181,26 @@ function SignupPage() {
                 {submitting ? (
                   <>
                     <Spinner />
-                    Creating account…
+                    {t('auth.creatingAccount')}
                   </>
                 ) : (
-                  'Create Account'
+                  t('auth.createAccountButton')
                 )}
               </Button>
             </FieldGroup>
           </form>
           <p className="mt-5 text-center text-xs leading-6 text-muted-foreground">
-            By creating an account, you agree to our{' '}
-            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">Terms of Service<span className="sr-only"> (opens in a new tab)</span></Link>
-            . Learn how we handle your information in our{' '}
-            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">Privacy Policy<span className="sr-only"> (opens in a new tab)</span></Link>.
+            {t('auth.termsPrefix')}{' '}
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">{t('auth.termsOfService')}<span className="sr-only">{t('auth.opensNewTab')}</span></Link>
+            {t('auth.privacyMiddle')}{' '}
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4">{t('auth.privacyPolicy')}<span className="sr-only">{t('auth.opensNewTab')}</span></Link>.
           </p>
         </CardContent>
 
         <CardFooter className="justify-center text-sm text-muted-foreground">
-          Already have an account?{' '}
-          <Link className="ml-1 font-medium text-foreground underline-offset-4 hover:underline" to="/sign-in">
-            Sign in
+          {t('auth.alreadyHaveAccount')}{' '}
+          <Link className="ms-1 font-medium text-foreground underline-offset-4 hover:underline" to="/sign-in">
+            {t('auth.signIn')}
           </Link>
         </CardFooter>
       </Card>

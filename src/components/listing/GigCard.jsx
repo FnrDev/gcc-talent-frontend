@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { StarIcon, Clock01Icon } from '@hugeicons/core-free-icons'
 
@@ -11,6 +12,7 @@ import UserLink from '@/components/UserLink'
 // over the whole card with after:inset-0, so clicking anywhere opens the
 // service while the card still exposes exactly one link to assistive tech.
 function GigCard({ gig }) {
+  const { t } = useTranslation()
   const cover = gig.gallery?.[0]
   const currency = gig.packages?.[0]?.currency ?? DEFAULT_CURRENCY
 
@@ -25,7 +27,7 @@ function GigCard({ gig }) {
             className="size-full object-cover transition-transform duration-300 group-hover/gig:scale-105"
           />
         )}
-        {gig.isFeatured && <Badge className="absolute top-2 left-2 shadow-sm">Featured</Badge>}
+        {gig.isFeatured && <Badge className="absolute top-2 start-2 shadow-sm">{t('format.featured')}</Badge>}
       </div>
 
       <CardContent className="flex flex-col gap-3 py-4">
@@ -36,7 +38,7 @@ function GigCard({ gig }) {
             raised
             nameClassName="text-sm font-medium text-foreground"
           />
-          <span className="ml-auto flex shrink-0 items-center gap-1 text-sm">
+          <span className="ms-auto flex shrink-0 items-center gap-1 text-sm">
             <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-3.5 text-primary" />
             <span className="font-medium text-foreground">{gig.ratingAvg.toFixed(1)}</span>
             <span className="text-muted-foreground">({gig.ratingCount})</span>
@@ -53,12 +55,12 @@ function GigCard({ gig }) {
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="size-3.5" />
           <span>From {gig.fastestDelivery} {gig.fastestDelivery === 1 ? 'day' : 'days'}</span>
-          <Badge variant="outline" className="ml-auto">{gig.category?.name}</Badge>
+          <Badge variant="outline" className="ms-auto">{gig.category?.name}</Badge>
         </div>
       </CardContent>
 
       <CardFooter className="justify-between">
-        <span className="text-xs text-muted-foreground">Starting at</span>
+        <span className="text-xs text-muted-foreground">{t('format.startingAt')}</span>
         <span className="text-base font-semibold text-foreground">
           {formatCurrency(gig.startingPrice, currency)}
         </span>

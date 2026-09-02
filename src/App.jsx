@@ -45,6 +45,19 @@ function App() {
   const isAdminRoute = location.pathname === "/admin" || location.pathname.startsWith("/admin/");
   const isLegalRoute = /^\/(privacy|terms)\/?$/i.test(location.pathname);
 
+  // Opening a job or a service from halfway down a listing used to land the
+  // reader halfway down the detail page, because the browser keeps the scroll
+  // offset across a client-side navigation. Reset it on every path change.
+  //
+  // Keyed on pathname alone on purpose: listing filters and pagination live in
+  // the query string, so refining a search leaves the reader where they are.
+  // A hash still wins — that is an explicit request for a position.
+  useEffect(() => {
+    if (location.hash) return undefined;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    return undefined;
+  }, [location.pathname, location.hash]);
+
   useEffect(() => {
     if (!location.hash) return undefined;
 

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { Search01Icon, FilterHorizontalIcon, Cancel01Icon } from '@hugeicons/core-free-icons'
+import { useTranslation } from 'react-i18next'
 
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Search01Icon } from '@hugeicons/core-free-icons'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -33,11 +34,11 @@ function SearchField({ value, onChange, placeholder }) {
   }, [draft, value, onChange])
 
   return (
-    <div className="relative min-w-0 flex-1 sm:max-w-xs">
+    <div className="relative">
       <HugeiconsIcon
         icon={Search01Icon}
         strokeWidth={2}
-        className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 start-2.5 size-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"
       />
       <Input
@@ -46,7 +47,7 @@ function SearchField({ value, onChange, placeholder }) {
         onChange={(event) => setDraft(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="pl-8"
+        className="w-full ps-8"
       />
     </div>
   )
@@ -59,7 +60,7 @@ function FilterSelect({ definition, value, onChange }) {
 
   return (
     <Select items={items} value={value} onValueChange={(next) => onChange(next ?? '')}>
-      <SelectTrigger aria-label={definition.label}>
+      <SelectTrigger aria-label={definition.title || definition.label} className="w-full">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -74,54 +75,48 @@ function FilterSelect({ definition, value, onChange }) {
 }
 
 /**
- * Renders a page's filter definitions. Each definition is
- * { key, type: 'search' | 'select', label, placeholder, options: [{value,label}] }
- * so Jobs and Services share this component while declaring different filters.
+ * Renders a page's filter definitions as the stacked sidebar rail that
+ * BrowseLayout expects. Each definition is
+ * { key, type: 'search' | 'select', title, label, placeholder, options: [...] }
+ * where `title` is the visible field label and `label` names the "no filter"
+ * option, matching how the jobs sidebar labels its own controls.
  */
-function FilterBar({ definitions, filters, onFilterChange, onClear, activeFilterCount, resultLabel }) {
+function FilterPanel({ definitions, filters, onFilterChange, onClear, activeFilterCount }) {
+  const { t } = useTranslation()
   const searchDefinition = definitions.find((definition) => definition.type === 'search')
   const selectDefinitions = definitions.filter((definition) => definition.type === 'select')
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {searchDefinition && (
+    <div className="grid gap-5">
+      {searchDefinition ? (
+        <label className="grid gap-1.5 text-sm font-medium">
+          {searchDefinition.title || t('common.search')}
           <SearchField
             value={filters[searchDefinition.key] ?? ''}
             onChange={(value) => onFilterChange(searchDefinition.key, value)}
             placeholder={searchDefinition.placeholder}
           />
-        )}
+        </label>
+      ) : null}
 
-        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          <HugeiconsIcon
-            icon={FilterHorizontalIcon}
-            strokeWidth={2}
-            className="hidden size-4 text-muted-foreground sm:block"
-            aria-hidden="true"
+      {selectDefinitions.map((definition) => (
+        <label key={definition.key} className="grid gap-1.5 text-sm font-medium">
+          {definition.title || definition.label}
+          <FilterSelect
+            definition={definition}
+            value={filters[definition.key] ?? ''}
+            onChange={(value) => onFilterChange(definition.key, value)}
           />
-          {selectDefinitions.map((definition) => (
-            <FilterSelect
-              key={definition.key}
-              definition={definition}
-              value={filters[definition.key] ?? ''}
-              onChange={(value) => onFilterChange(definition.key, value)}
-            />
-          ))}
-        </div>
-      </div>
+        </label>
+      ))}
 
-      <div className="flex min-h-7 items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{resultLabel}</p>
-        {activeFilterCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={onClear}>
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} data-icon="inline-start" />
-            Clear filters
-          </Button>
-        )}
-      </div>
+      {activeFilterCount > 0 ? (
+        <Button type="button" variant="ghost" className="w-full" onClick={onClear}>
+          {t('common.clearFilters')}
+        </Button>
+      ) : null}
     </div>
   )
 }
 
-export default FilterBar
+export default FilterPanel

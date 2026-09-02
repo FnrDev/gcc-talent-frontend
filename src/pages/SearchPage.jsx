@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -10,7 +11,7 @@ import {
   StarIcon,
 } from '@hugeicons/core-free-icons'
 
-import Footer from '@/components/landing/Footer'
+import BrowseLayout from '@/components/listing/BrowseLayout'
 import JobCard from '@/components/listing/JobCard'
 import ServiceCard from '@/components/listing/ServiceCard'
 import UserLink from '@/components/UserLink'
@@ -33,15 +34,15 @@ import { searchMarketplace } from '@/services/generalService'
 
 const PAGE_SIZE = 12
 const SEARCH_TYPES = [
-  { value: 'services', label: 'Services', noun: 'services' },
-  { value: 'jobs', label: 'Jobs', noun: 'jobs' },
-  { value: 'freelancers', label: 'Freelancers', noun: 'freelancers' },
+  { value: 'services', labelKey: 'search.typeServices', nounKey: 'search.nounServices' },
+  { value: 'jobs', labelKey: 'search.typeJobs', nounKey: 'search.nounJobs' },
+  { value: 'freelancers', labelKey: 'search.typeFreelancers', nounKey: 'search.nounFreelancers' },
 ]
 const SEARCH_TYPE_VALUES = new Set(SEARCH_TYPES.map((option) => option.value))
-const AVAILABILITY_LABELS = {
-  full_time: 'Available full time',
-  part_time: 'Available part time',
-  unavailable: 'Unavailable',
+const AVAILABILITY_KEYS = {
+  full_time: 'search.availabilityFullTime',
+  part_time: 'search.availabilityPartTime',
+  unavailable: 'search.availabilityUnavailable',
 }
 
 function normalizeType(value) {
@@ -56,6 +57,7 @@ function normalizePage(value) {
 }
 
 function FreelancerCard({ freelancer }) {
+  const { t } = useTranslation()
   const profile = freelancer.profile || {}
   const skills = Array.isArray(profile.skills) ? profile.skills.slice(0, 4) : []
   const location = [freelancer.city, freelancer.country].filter(Boolean).join(', ')
@@ -78,7 +80,7 @@ function FreelancerCard({ freelancer }) {
               icon={CheckmarkBadge01Icon}
               strokeWidth={2}
               className="size-5 shrink-0 text-primary"
-              aria-label="Email verified"
+              aria-label={t('search.emailVerified')}
             />
           ) : null}
         </div>
@@ -95,7 +97,7 @@ function FreelancerCard({ freelancer }) {
 
       <CardContent className="flex flex-1 flex-col gap-4">
         <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-          {profile.bio || 'This freelancer has not added an introduction yet.'}
+          {profile.bio || t('search.noIntroduction')}
         </p>
         {skills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -113,13 +115,17 @@ function FreelancerCard({ freelancer }) {
           {Number.isFinite(hourlyRate) ? (
             <span>{formatCurrency(hourlyRate, profile.currency)}/hr</span>
           ) : null}
-          {profile.availability ? <span>{AVAILABILITY_LABELS[profile.availability] || profile.availability}</span> : null}
+          {profile.availability ? (
+            <span>
+              {AVAILABILITY_KEYS[profile.availability] ? t(AVAILABILITY_KEYS[profile.availability]) : profile.availability}
+            </span>
+          ) : null}
         </div>
       </CardContent>
 
       <CardFooter className="justify-between gap-3">
         <span className="text-xs text-muted-foreground">
-          {Number(profile.completedContracts || 0).toLocaleString()} completed
+          {t('search.completedContracts', { count: Number(profile.completedContracts || 0) })}
         </span>
         <Button
           variant="outline"
@@ -127,7 +133,7 @@ function FreelancerCard({ freelancer }) {
           nativeButton={false}
           render={<Link to={`/profile/${freelancer._id}`} />}
         >
-          View profile
+          {t('search.viewProfile')}
         </Button>
       </CardFooter>
     </Card>
@@ -135,6 +141,7 @@ function FreelancerCard({ freelancer }) {
 }
 
 function SearchPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const type = normalizeType(searchParams.get('type'))
   const query = (searchParams.get('query') || '').trim()
@@ -169,6 +176,7 @@ function SearchPage() {
   const items = Array.isArray(currentResult.data?.results) ? currentResult.data.results : []
   const pagination = currentResult.data?.pagination || null
   const activeType = SEARCH_TYPES.find((option) => option.value === type) || SEARCH_TYPES[0]
+  const activeNoun = t(activeType.nounKey)
 
   function submitSearch(event) {
     event.preventDefault()
@@ -191,123 +199,138 @@ function SearchPage() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted/20">
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-medium text-primary">Marketplace search</p>
-          <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Search jobs, services, and GCC talent
-          </h1>
-          <p className="mt-3 text-muted-foreground">
-            Switch result types without losing the search flow, then open any listing or public profile.
-          </p>
-        </div>
-
-        <Card className="mx-auto mt-8 max-w-4xl p-3 sm:p-4">
-          <form key={`${type}:${query}`} onSubmit={submitSearch} className="flex flex-col gap-2 sm:flex-row">
-            <NativeSelect name="type" defaultValue={type} className="w-full sm:w-44" aria-label="Search type">
+    <BrowseLayout
+      badge={
+        <Badge variant="outline" className="mb-4 gap-1.5 px-3 py-1">
+          <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+          {t('search.badge')}
+        </Badge>
+      }
+      title={t('search.title')}
+      subtitle={t('search.subtitle')}
+      search={
+        <form key={`hero:${query}`} onSubmit={submitSearch} className="flex flex-col gap-2 sm:flex-row" role="search">
+          <input type="hidden" name="type" value={type} />
+          <div className="relative flex-1">
+            <HugeiconsIcon
+              icon={Search01Icon}
+              strokeWidth={2}
+              className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              type="search"
+              name="query"
+              defaultValue={query}
+              maxLength={100}
+              className="h-11 ps-9"
+              placeholder={t('search.searchPlaceholder', { noun: activeNoun })}
+              aria-label={t('search.searchPlaceholder', { noun: activeNoun })}
+            />
+          </div>
+          <Button type="submit" size="lg" className="h-11 px-5">
+            {t('common.search')}
+          </Button>
+        </form>
+      }
+      filters={
+        <form key={`rail:${type}:${query}`} onSubmit={submitSearch} className="grid gap-5">
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t('search.resultType')}
+            <NativeSelect name="type" defaultValue={type} className="w-full" aria-label={t('search.resultType')}>
               {SEARCH_TYPES.map((option) => (
-                <NativeSelectOption key={option.value} value={option.value}>{option.label}</NativeSelectOption>
+                <NativeSelectOption key={option.value} value={option.value}>{t(option.labelKey)}</NativeSelectOption>
               ))}
             </NativeSelect>
-            <div className="relative min-w-0 flex-1">
-              <HugeiconsIcon
-                icon={Search01Icon}
-                strokeWidth={2}
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                type="search"
-                name="query"
-                defaultValue={query}
-                maxLength={100}
-                placeholder={`Search ${activeType.noun}`}
-                aria-label={`Search ${activeType.noun}`}
-                className="pl-9"
-              />
-            </div>
-            <Button type="submit">
-              Search
-              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
-            </Button>
-          </form>
-        </Card>
+          </label>
 
-        <section className="mt-10" aria-live="polite">
+          {/* Carries the hero's query through so switching type refines the
+              current search instead of clearing it. */}
+          <input type="hidden" name="query" value={query} />
+
+          <Button type="submit" className="w-full">{t('common.applyFilters')}</Button>
           {query ? (
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="text-sm text-muted-foreground">{activeType.label}</p>
-                <h2 className="font-heading text-xl font-semibold text-foreground">
-                  Results for “{query}”
-                </h2>
-              </div>
-              {pagination ? (
-                <p className="text-sm text-muted-foreground">
-                  {pagination.total.toLocaleString()} {activeType.noun}
-                </p>
-              ) : null}
-            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setSearchParams(new URLSearchParams({ type }))}
+            >
+              {t('common.clearFilters')}
+            </Button>
           ) : null}
+        </form>
+      }
+      resultsTitle={query ? t('search.resultsFor', { query }) : t(activeType.labelKey)}
+      resultsSummary={
+        loading
+          ? t('search.searching')
+          : !query
+            ? t('search.enterKeyword', { noun: activeNoun })
+            : pagination
+              ? t('search.totalCount', { count: pagination.total, noun: activeNoun })
+              : t('search.noneFound', { noun: activeNoun })
+      }
+    >
+      {currentResult.error ? (
+        <Alert variant="destructive">
+          <AlertTitle>{t('search.failedTitle')}</AlertTitle>
+          <AlertDescription>{currentResult.error}</AlertDescription>
+        </Alert>
+      ) : loading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }, (_, index) => (
+            <Skeleton key={index} className="h-80 rounded-xl" />
+          ))}
+        </div>
+      ) : !query ? (
+        <Empty className="min-h-72 border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><HugeiconsIcon icon={Search01Icon} strokeWidth={2} /></EmptyMedia>
+            <EmptyTitle>{t('search.startTitle')}</EmptyTitle>
+            <EmptyDescription>
+              {t('search.startDescription')}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : items.length === 0 ? (
+        <Empty className="min-h-72 border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><HugeiconsIcon icon={Search01Icon} strokeWidth={2} /></EmptyMedia>
+            <EmptyTitle>{t('search.noneFound', { noun: activeNoun })}</EmptyTitle>
+            <EmptyDescription>{t('search.emptyDescription')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {items.map((item) => {
+            if (type === 'jobs') return <JobCard key={item._id} job={item} />
+            if (type === 'freelancers') return <FreelancerCard key={item._id} freelancer={item} />
+            return <ServiceCard key={item._id} service={item} />
+          })}
+        </div>
+      )}
 
-          {currentResult.error ? (
-            <Alert variant="destructive">
-              <AlertTitle>Search failed</AlertTitle>
-              <AlertDescription>{currentResult.error}</AlertDescription>
-            </Alert>
-          ) : loading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }, (_, index) => (
-                <Skeleton key={index} className="h-80 rounded-xl" />
-              ))}
-            </div>
-          ) : !query ? (
-            <Empty className="min-h-72 border">
-              <EmptyHeader>
-                <EmptyMedia variant="icon"><HugeiconsIcon icon={Search01Icon} strokeWidth={2} /></EmptyMedia>
-                <EmptyTitle>Start with a name, skill, or project</EmptyTitle>
-                <EmptyDescription>
-                  Choose services, jobs, or freelancers and enter what you are looking for.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : items.length === 0 ? (
-            <Empty className="min-h-72 border">
-              <EmptyHeader>
-                <EmptyMedia variant="icon"><HugeiconsIcon icon={Search01Icon} strokeWidth={2} /></EmptyMedia>
-                <EmptyTitle>No {activeType.noun} found</EmptyTitle>
-                <EmptyDescription>Try a broader term or switch to another result type.</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((item) => {
-                if (type === 'jobs') return <JobCard key={item._id} job={item} />
-                if (type === 'freelancers') return <FreelancerCard key={item._id} freelancer={item} />
-                return <ServiceCard key={item._id} service={item} />
-              })}
-            </div>
-          )}
-
-          {pagination?.totalPages > 1 ? (
-            <div className="mt-8 flex items-center justify-center gap-3">
-              <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} data-icon="inline-start" />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {page} of {pagination.totalPages}
-              </span>
-              <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>
-                Next
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
-              </Button>
-            </div>
-          ) : null}
-        </section>
-      </main>
-      <Footer />
-    </div>
+      {pagination?.totalPages > 1 ? (
+        <nav className="mt-6 flex items-center justify-between gap-4" aria-label={t('search.pagesLabel')}>
+          <Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} data-icon="inline-start" />
+            {t('common.previous')}
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            <Trans
+              i18nKey="common.pageOf"
+              values={{ page, total: pagination.totalPages }}
+              components={[<span key="0" className="font-medium text-foreground" />]}
+            />
+          </span>
+          <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>
+            {t('common.next')}
+            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
+          </Button>
+        </nav>
+      ) : null}
+    </BrowseLayout>
   )
 }
 

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import Hero from '@/components/landing/Hero'
 import PopularServices from '@/components/landing/PopularServices'
-import HowItWorks from '@/components/landing/HowItWorks'
 import PromoBanner from '@/components/landing/PromoBanner'
 import FeaturedFreelancers from '@/components/landing/FeaturedFreelancers'
 import BestClientMatches from '@/components/landing/BestClientMatches'
@@ -13,22 +13,24 @@ import { Button } from '@/components/ui/button'
 import { getHome } from '@/services/generalService'
 
 function Homepage() {
+  const { t } = useTranslation()
   const [requestVersion, setRequestVersion] = useState(0)
-  const [result, setResult] = useState({ version: null, data: null, error: '' })
+  const [result, setResult] = useState({ version: null, data: null, error: '', failed: false })
 
   useEffect(() => {
     let cancelled = false
 
     getHome()
       .then((data) => {
-        if (!cancelled) setResult({ version: requestVersion, data, error: '' })
+        if (!cancelled) setResult({ version: requestVersion, data, error: '', failed: false })
       })
       .catch((error) => {
         if (cancelled) return
         setResult({
           version: requestVersion,
           data: null,
-          error: error?.response?.data?.message || 'Marketplace highlights are unavailable right now.',
+          error: error?.response?.data?.message || '',
+          failed: true,
         })
       })
 
@@ -39,39 +41,40 @@ function Homepage() {
 
   const retry = useCallback(() => setRequestVersion((version) => version + 1), [])
   const loading = result.version !== requestVersion
-  const currentResult = loading ? { data: null, error: '' } : result
+  const currentResult = loading ? { data: null, error: '', failed: false } : result
   const home = currentResult.data || {}
 
   return (
     <div>
       <Hero />
-      {currentResult.error ? (
+      {currentResult.failed ? (
         <div className="mx-auto max-w-6xl px-4 pt-6">
           <Alert>
-            <AlertTitle>Marketplace highlights are unavailable</AlertTitle>
+            <AlertTitle>{t('home.highlightsUnavailable')}</AlertTitle>
             <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-              <span>{currentResult.error}</span>
-              <Button type="button" variant="outline" size="sm" onClick={retry}>Try again</Button>
+              <span>{currentResult.error || t('home.highlightsError')}</span>
+              <Button type="button" variant="outline" size="sm" onClick={retry}>{t('common.tryAgain')}</Button>
             </AlertDescription>
           </Alert>
         </div>
       ) : null}
       <PopularServices categories={home.categories} loading={loading} />
-      <HowItWorks />
       <PromoBanner
-        eyebrow="For Freelancers"
-        title="Grow your business with GCC Talents Pro"
-        description="Get featured placement and priority support to win more clients."
-        actionLabel="Learn More"
+        eyebrow={t('home.proEyebrow')}
+        title={t('home.proTitle')}
+        description={t('home.proDescription')}
+        actionLabel={t('home.proAction')}
         actionTo="/sign-up"
+        ramp="teal"
       />
       <FeaturedFreelancers services={home.services} loading={loading} />
       <PromoBanner
-        eyebrow="For Clients"
-        title="Post a job and get proposals within 24 hours"
-        description="Describe what you need and let qualified freelancers come to you."
-        actionLabel="Post a Job"
+        eyebrow={t('home.clientEyebrow')}
+        title={t('home.clientTitle')}
+        description={t('home.clientDescription')}
+        actionLabel={t('home.clientAction')}
         actionTo="/jobs/new"
+        ramp="clay"
       />
       <BestClientMatches jobs={home.jobs} loading={loading} />
       <CallToAction />

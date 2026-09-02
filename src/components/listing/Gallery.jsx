@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
@@ -7,6 +8,7 @@ import { cn } from '@/lib/utils'
 
 // Main image plus a thumbnail strip, as in the reference detail layout.
 function Gallery({ images = [], title }) {
+  const { t } = useTranslation()
   const [active, setActive] = useState(0)
 
   if (!images.length) {
@@ -31,7 +33,7 @@ function Gallery({ images = [], title }) {
             <Button
               variant="outline"
               size="icon"
-              aria-label="Previous image"
+              aria-label={t('reviews.previousImage')}
               onClick={() => step(-1)}
               className="absolute top-1/2 left-3 -translate-y-1/2 shadow-sm"
             >
@@ -40,7 +42,7 @@ function Gallery({ images = [], title }) {
             <Button
               variant="outline"
               size="icon"
-              aria-label="Next image"
+              aria-label={t('reviews.nextImage')}
               onClick={() => step(1)}
               className="absolute top-1/2 right-3 -translate-y-1/2 shadow-sm"
             >
@@ -54,7 +56,7 @@ function Gallery({ images = [], title }) {
         <div
           className="flex max-w-full gap-2 overflow-x-auto pb-1"
           role="tablist"
-          aria-label={`${title} images`}
+          aria-label={t('reviews.galleryLabel', { title })}
         >
           {images.map((image, index) => (
             <button
@@ -62,7 +64,7 @@ function Gallery({ images = [], title }) {
               type="button"
               role="tab"
               aria-selected={index === active}
-              aria-label={`Image ${index + 1} of ${images.length}`}
+              aria-label={t('reviews.imageOf', { index: index + 1, total: images.length })}
               onClick={() => setActive(index)}
               className={cn(
                 'shrink-0 overflow-hidden rounded-lg ring-1 transition-all focus-visible:ring-3 focus-visible:ring-ring/50',

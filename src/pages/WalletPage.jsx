@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -15,26 +16,40 @@ import {
   getWallet,
   withdrawWalletFunds,
 } from '@/services/walletService'
+import i18n from '@/i18n'
 
-const MONEY_FORMATTER = new Intl.NumberFormat('en-BH', {
-  style: 'currency',
-  currency: 'BHD',
-  minimumFractionDigits: 3,
-  maximumFractionDigits: 3,
-})
+// Arabic keeps Latin digits, consistent with the rest of the marketplace.
+function localeTag() {
+  return i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en-BH'
+}
 
-const DATE_FORMATTER = new Intl.DateTimeFormat('en-BH', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
+function moneyFormatter() {
+  return new Intl.NumberFormat(localeTag(), {
+    style: 'currency',
+    currency: 'BHD',
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  })
+}
 
-const TRANSACTION_LABELS = {
-  deposit: 'Deposit',
-  escrow_fund: 'Milestone funding',
-  escrow_release: 'Escrow release',
-  escrow_refund: 'Escrow refund',
-  platform_fee: 'Platform fee',
-  withdrawal: 'Withdrawal',
+function formatDateTime(value) {
+  return new Intl.DateTimeFormat(localeTag(), {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(value)
+}
+
+const TRANSACTION_TYPES = [
+  'deposit',
+  'escrow_fund',
+  'escrow_release',
+  'escrow_refund',
+  'platform_fee',
+  'withdrawal',
+]
+
+function transactionLabel(type) {
+  return i18n.exists(`walletPage.${type}`) ? i18n.t(`walletPage.${type}`) : type
 }
 
 function randomKey() {
@@ -43,7 +58,7 @@ function randomKey() {
 
 function amount(value) {
   const parsed = Number(value)
-  return Number.isFinite(parsed) ? MONEY_FORMATTER.format(parsed) : '—'
+  return Number.isFinite(parsed) ? moneyFormatter().format(parsed) : '—'
 }
 
 function requestError(error, fallback) {
@@ -58,6 +73,7 @@ function attemptKey(attemptRef, signature) {
 }
 
 function WalletPage() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [wallet, setWallet] = useState(null)
   const [transactions, setTransactions] = useState([])
@@ -96,7 +112,7 @@ function WalletPage() {
     try {
       await Promise.all([loadWallet(), loadTransactions()])
     } catch (loadError) {
-      setError(requestError(loadError, 'We could not load your wallet.'))
+      setError(requestError(loadError, i18n.t('walletPage.loadFailed')))
     } finally {
       setLoading(false)
     }
@@ -120,12 +136,12 @@ function WalletPage() {
     try {
       const data = await addWalletFunds(payload, key)
       setWallet(data.wallet)
-      setNotice('Funds added to your BHD wallet.')
+      setNotice(t('walletPage.depositSuccess'))
       setDeposit((current) => ({ ...current, amount: '', cvc: '' }))
       depositAttempt.current = null
       await loadTransactions()
     } catch (depositError) {
-      setError(requestError(depositError, 'The deposit could not be completed.'))
+      setError(requestError(depositError, t('walletPage.depositFailed')))
       if (depositError?.response?.status === 402) {
         if (depositError.response.data?.data?.wallet) setWallet(depositError.response.data.data.wallet)
         await loadTransactions()
@@ -149,10 +165,10 @@ function WalletPage() {
       setWallet(data.wallet)
       setWithdrawalAmount('')
       withdrawalAttempt.current = null
-      setNotice('Withdrawal completed.')
+      setNotice(t('walletPage.withdrawSuccess'))
       await loadTransactions()
     } catch (withdrawalError) {
-      setError(requestError(withdrawalError, 'The withdrawal could not be completed.'))
+      setError(requestError(withdrawalError, t('walletPage.withdrawFailed')))
     } finally {
       setBusy('')
     }
@@ -171,33 +187,33 @@ function WalletPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <p className="text-sm font-medium text-primary">Payments</p>
-        <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">Wallet</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Balances, escrow movements, deposits, withdrawals, and receipts use Bahraini dinar.</p>
+        <p className="text-sm font-medium text-primary">{t('walletPage.payments')}</p>
+        <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">{t('walletPage.wallet')}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t('walletPage.subtitle')}</p>
       </div>
 
       {error && (
         <Alert variant="destructive" className="mb-5">
-          <AlertTitle>Payment not completed</AlertTitle>
+          <AlertTitle>{t('walletPage.paymentNotCompleted')}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       {notice && (
         <Alert className="mb-5">
-          <AlertTitle>Wallet updated</AlertTitle>
+          <AlertTitle>{t('walletPage.walletUpdated')}</AlertTitle>
           <AlertDescription>{notice}</AlertDescription>
         </Alert>
       )}
 
       <section className="mb-6 grid gap-4 sm:grid-cols-3">
         {[
-          ['Available', wallet?.available],
-          ['Pending', wallet?.pending],
-          ['Total', wallet?.total],
-        ].map(([label, value]) => (
-          <Card key={label}>
+          ['walletPage.available', wallet?.available],
+          ['walletPage.pending', wallet?.pending],
+          ['walletPage.total', wallet?.total],
+        ].map(([labelKey, value]) => (
+          <Card key={labelKey}>
             <CardHeader>
-              <CardDescription>{label}</CardDescription>
+              <CardDescription>{t(labelKey)}</CardDescription>
               <CardTitle className="text-2xl">{amount(value)}</CardTitle>
             </CardHeader>
           </Card>
@@ -208,13 +224,13 @@ function WalletPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Add funds</CardTitle>
-              <CardDescription>This is a mock checkout. Real card details are never accepted or stored.</CardDescription>
+              <CardTitle>{t('walletPage.addFunds')}</CardTitle>
+              <CardDescription>{t('walletPage.mockCheckout')}</CardDescription>
             </CardHeader>
             <CardContent>
               <form className="space-y-3" onSubmit={submitDeposit}>
                 <div>
-                  <Label htmlFor="deposit-amount">Amount (BHD)</Label>
+                  <Label htmlFor="deposit-amount">{t('walletPage.amountBhd')}</Label>
                   <Input
                     id="deposit-amount"
                     type="number"
@@ -227,7 +243,7 @@ function WalletPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cardholder-name">Cardholder name</Label>
+                  <Label htmlFor="cardholder-name">{t('walletPage.cardholderName')}</Label>
                   <Input
                     id="cardholder-name"
                     autoComplete="cc-name"
@@ -237,7 +253,7 @@ function WalletPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="card-number">Mock card number</Label>
+                  <Label htmlFor="card-number">{t('walletPage.mockCardNumber')}</Label>
                   <Input
                     id="card-number"
                     inputMode="numeric"
@@ -246,11 +262,11 @@ function WalletPage() {
                     value={deposit.cardNumber}
                     onChange={(event) => setDeposit((current) => ({ ...current, cardNumber: event.target.value }))}
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">4242 4242 4242 4242 succeeds · 4000 0000 0000 0002 declines</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('walletPage.cardHint')}</p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label htmlFor="expiry-month">Month</Label>
+                    <Label htmlFor="expiry-month">{t('walletPage.month')}</Label>
                     <Input
                       id="expiry-month"
                       inputMode="numeric"
@@ -260,7 +276,7 @@ function WalletPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="expiry-year">Year</Label>
+                    <Label htmlFor="expiry-year">{t('walletPage.year')}</Label>
                     <Input
                       id="expiry-year"
                       inputMode="numeric"
@@ -270,7 +286,7 @@ function WalletPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="card-cvc">CVC</Label>
+                    <Label htmlFor="card-cvc">{t('walletPage.cvc')}</Label>
                     <Input
                       id="card-cvc"
                       type="password"
@@ -283,7 +299,7 @@ function WalletPage() {
                   </div>
                 </div>
                 <Button className="w-full" type="submit" disabled={Boolean(busy)}>
-                  {busy === 'deposit' ? 'Processing…' : 'Add funds'}
+                  {busy === 'deposit' ? t('walletPage.processing') : t('walletPage.addFunds')}
                 </Button>
               </form>
             </CardContent>
@@ -292,13 +308,13 @@ function WalletPage() {
           {user?.role === 'freelancer' && (
             <Card>
               <CardHeader>
-                <CardTitle>Withdraw funds</CardTitle>
-                <CardDescription>Withdrawals debit your available balance immediately.</CardDescription>
+                <CardTitle>{t('walletPage.withdrawFunds')}</CardTitle>
+                <CardDescription>{t('walletPage.withdrawHint')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form className="space-y-3" onSubmit={submitWithdrawal}>
                   <div>
-                    <Label htmlFor="withdrawal-amount">Amount (BHD)</Label>
+                    <Label htmlFor="withdrawal-amount">{t('walletPage.amountBhd')}</Label>
                     <Input
                       id="withdrawal-amount"
                       type="number"
@@ -311,7 +327,7 @@ function WalletPage() {
                     />
                   </div>
                   <Button className="w-full" type="submit" variant="outline" disabled={Boolean(busy)}>
-                    {busy === 'withdrawal' ? 'Withdrawing…' : 'Withdraw'}
+                    {busy === 'withdrawal' ? t('walletPage.withdrawing') : t('walletPage.withdraw')}
                   </Button>
                 </form>
               </CardContent>
@@ -321,12 +337,12 @@ function WalletPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Transaction history</CardTitle>
-            <CardDescription>Completed and failed movements, newest first.</CardDescription>
+            <CardTitle>{t('walletPage.transactionHistory')}</CardTitle>
+            <CardDescription>{t('walletPage.historyHint')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Label htmlFor="transaction-type">Type</Label>
+              <Label htmlFor="transaction-type">{t('walletPage.type')}</Label>
               <select
                 id="transaction-type"
                 className="h-9 rounded-lg border bg-background px-3 text-sm"
@@ -336,10 +352,10 @@ function WalletPage() {
                   setPage(1)
                 }}
               >
-                <option value="">All transactions</option>
-                {Object.entries(TRANSACTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="">{t('walletPage.allTransactions')}</option>
+                {TRANSACTION_TYPES.map((value) => <option key={value} value={value}>{transactionLabel(value)}</option>)}
               </select>
-              <Button size="sm" variant="ghost" onClick={loadAll}>Refresh</Button>
+              <Button size="sm" variant="ghost" onClick={loadAll}>{t('workspace.refresh')}</Button>
             </div>
 
             <div className="divide-y rounded-xl border">
@@ -349,13 +365,13 @@ function WalletPage() {
                   <div key={transaction._id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{TRANSACTION_LABELS[transaction.type] || transaction.type}</p>
-                        <Badge variant={transaction.status === 'failed' ? 'destructive' : 'outline'}>{transaction.status}</Badge>
+                        <p className="font-medium">{transactionLabel(transaction.type)}</p>
+                        <Badge variant={transaction.status === 'failed' ? 'destructive' : 'outline'}>{i18n.exists(`status.${transaction.status}`) ? t(`status.${transaction.status}`) : transaction.status}</Badge>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">{DATE_FORMATTER.format(new Date(transaction.createdAt))}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(new Date(transaction.createdAt))}</p>
                       {transaction.contract?.title && <p className="mt-1 text-xs text-muted-foreground">{transaction.contract.title}</p>}
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className={`font-medium ${credit ? 'text-emerald-700' : ''}`}>{credit ? '+' : '−'}{amount(transaction.amount)}</p>
                       <Button
                         className="mt-1 h-auto px-0 text-xs"
@@ -363,19 +379,19 @@ function WalletPage() {
                         nativeButton={false}
                         render={<Link to={`/transactions/${transaction._id}/receipt`} />}
                       >
-                        View receipt
+                        {t('walletPage.viewReceipt')}
                       </Button>
                     </div>
                   </div>
                 )
-              }) : <p className="px-4 py-10 text-center text-sm text-muted-foreground">No transactions match this filter.</p>}
+              }) : <p className="px-4 py-10 text-center text-sm text-muted-foreground">{t('walletPage.noTransactions')}</p>}
             </div>
 
             {pagination?.totalPages > 1 && (
               <div className="mt-4 flex items-center justify-between">
-                <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</Button>
-                <span className="text-sm text-muted-foreground">Page {page} of {pagination.totalPages}</span>
-                <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>Next</Button>
+                <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>{t('common.previous')}</Button>
+                <span className="text-sm text-muted-foreground">{t('common.pageOfPlain', { page, total: pagination.totalPages })}</span>
+                <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>{t('common.next')}</Button>
               </div>
             )}
           </CardContent>

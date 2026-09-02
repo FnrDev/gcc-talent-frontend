@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Location01Icon, UserMultipleIcon, Time04Icon } from '@hugeicons/core-free-icons'
 
@@ -6,8 +7,8 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { categoryImage } from '@/lib/placeholders'
 import {
-  BUDGET_TYPE_LABELS,
-  EXPERIENCE_LABELS,
+  budgetTypeLabel,
+  experienceLabel,
   formatBudget,
   timeAgo,
 } from '@/lib/format'
@@ -18,6 +19,8 @@ import UserLink from '@/components/UserLink'
 // actually decides on: budget, level, and competition. Like GigCard, the title
 // link is stretched across the card so the whole surface is clickable.
 function JobCard({ job }) {
+  const { t } = useTranslation()
+
   return (
     <Card className="group/job relative gap-0 overflow-hidden py-0">
       <div className="relative aspect-16/9 overflow-hidden bg-muted">
@@ -27,7 +30,7 @@ function JobCard({ job }) {
           loading="lazy"
           className="size-full object-cover transition-transform duration-300 group-hover/job:scale-105"
         />
-        <Badge variant="outline" className="absolute top-2 left-2 bg-background/90 shadow-sm">
+        <Badge variant="outline" className="absolute top-2 start-2 bg-background/90 shadow-sm">
           {job.category?.name}
         </Badge>
       </div>
@@ -54,19 +57,19 @@ function JobCard({ job }) {
 
         <dl className="mt-auto grid grid-cols-2 gap-x-3 gap-y-1.5 pt-1 text-xs">
           <div className="col-span-2 flex items-baseline gap-1.5">
-            <dt className="sr-only">Budget</dt>
+            <dt className="sr-only">{t('format.budget')}</dt>
             <dd className="text-sm font-semibold text-foreground">{formatBudget(job)}</dd>
-            <span className="text-muted-foreground">· {BUDGET_TYPE_LABELS[job.budgetType]}</span>
+            <span className="text-muted-foreground">· {budgetTypeLabel(job.budgetType)}</span>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <HugeiconsIcon icon={Time04Icon} strokeWidth={2} className="size-3.5" />
-            <dt className="sr-only">Experience level</dt>
-            <dd>{EXPERIENCE_LABELS[job.experienceLevel] ?? 'Any level'}</dd>
+            <dt className="sr-only">{t('format.experienceLevel')}</dt>
+            <dd>{experienceLabel(job.experienceLevel)}</dd>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <HugeiconsIcon icon={UserMultipleIcon} strokeWidth={2} className="size-3.5" />
-            <dt className="sr-only">Proposals</dt>
-            <dd>{job.proposalsCount} proposals</dd>
+            <dt className="sr-only">{t('format.proposals')}</dt>
+            <dd>{t('format.proposalsCount', { count: job.proposalsCount })}</dd>
           </div>
         </dl>
       </CardContent>

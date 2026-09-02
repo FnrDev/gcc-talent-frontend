@@ -1,27 +1,36 @@
-import FilterBar from './FilterBar'
+import { useTranslation } from 'react-i18next'
+
+import BrowseLayout from './BrowseLayout'
+import FilterPanel from './FilterPanel'
+import HeroSearch from './HeroSearch'
 import ListingGrid from './ListingGrid'
 import Paginator from './Paginator'
 import SeoTextBlock from './SeoTextBlock'
 import PromoBanner from '@/components/landing/PromoBanner'
-import Footer from '@/components/landing/Footer'
 
-function resultLabel({ loading, pagination, activeFilterCount, noun }) {
-  if (loading) return 'Loading…'
-  if (!pagination || pagination.total === 0) return `No ${noun} found`
+// Arabic has six plural forms, so the count goes through i18next rather than a
+// hand-rolled singular/plural swap.
+function resultLabel({ t, loading, pagination, activeFilterCount, nounKey }) {
+  if (loading) return t('common.loading')
 
-  const suffix = activeFilterCount > 0 ? ' match your filters' : ' available'
-  return `${pagination.total} ${pagination.total === 1 ? noun.replace(/s$/, '') : noun}${suffix}`
+  const noun = t(nounKey)
+  if (!pagination || pagination.total === 0) return t('listing.noneFound', { noun })
+
+  const key = activeFilterCount > 0 ? 'listing.matching' : 'listing.available'
+  return t(key, { count: pagination.total, noun })
 }
 
 /**
- * The shared browse-page shell. Both /jobs and /services are this component
- * plus a listing query, a set of filter definitions, and a card renderer —
- * everything that genuinely differs between the two.
+ * The declarative browse page: a listing query, a set of filter definitions,
+ * and a card renderer. Everything structural comes from BrowseLayout, which
+ * /jobs and /search render through as well.
  */
 function ListingPage({
+  badge,
   title,
   subtitle,
-  noun,
+  resultsTitle,
+  nounKey,
   listing,
   filterDefinitions,
   renderItem,
@@ -31,51 +40,59 @@ function ListingPage({
   emptyTitle,
   emptyDescription,
 }) {
+  const { t } = useTranslation()
   const { items, pagination, loading, error, filters, page, setFilter, setPage, clearFilters, activeFilterCount } =
     listing
 
-  return (
-    <div className="flex min-h-svh flex-col">
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        <header className="mb-6">
-          <h1 className="font-heading text-2xl font-semibold text-foreground">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-        </header>
+  // The search box sits in the hero like the jobs page it mirrors; the rail
+  // below is left for refinements only, so the query isn't asked for twice.
+  const searchDefinition = filterDefinitions.find((definition) => definition.type === 'search')
+  const railDefinitions = filterDefinitions.filter((definition) => definition.type !== 'search')
 
-        <FilterBar
-          definitions={filterDefinitions}
+  return (
+    <BrowseLayout
+      badge={badge}
+      title={title}
+      subtitle={subtitle}
+      resultsTitle={resultsTitle}
+      resultsSummary={resultLabel({ t, loading, pagination, activeFilterCount, nounKey })}
+      search={
+        searchDefinition ? (
+          <HeroSearch
+            value={filters[searchDefinition.key] ?? ''}
+            onChange={(value) => setFilter(searchDefinition.key, value)}
+            placeholder={searchDefinition.placeholder}
+            buttonLabel={searchDefinition.buttonLabel}
+          />
+        ) : null
+      }
+      filters={
+        <FilterPanel
+          definitions={railDefinitions}
           filters={filters}
           onFilterChange={setFilter}
           onClear={clearFilters}
           activeFilterCount={activeFilterCount}
-          resultLabel={resultLabel({ loading, pagination, activeFilterCount, noun })}
         />
+      }
+      seo={seo ? <SeoTextBlock title={seo.title} paragraphs={seo.paragraphs} /> : null}
+      promo={promo ? <PromoBanner {...promo} /> : null}
+    >
+      <ListingGrid
+        items={items}
+        loading={loading}
+        error={error}
+        renderItem={renderItem}
+        withMedia={withMedia}
+        onClear={activeFilterCount > 0 ? clearFilters : undefined}
+        emptyTitle={emptyTitle}
+        emptyDescription={emptyDescription}
+      />
 
-        <div className="mt-6">
-          <ListingGrid
-            items={items}
-            loading={loading}
-            error={error}
-            renderItem={renderItem}
-            withMedia={withMedia}
-            onClear={activeFilterCount > 0 ? clearFilters : undefined}
-            emptyTitle={emptyTitle}
-            emptyDescription={emptyDescription}
-          />
-        </div>
-
-        <div className="mt-8">
-          <Paginator page={page} totalPages={pagination?.totalPages ?? 0} onPageChange={setPage} />
-        </div>
-
-        <div className="mt-12">
-          <SeoTextBlock title={seo.title} paragraphs={seo.paragraphs} />
-        </div>
-      </main>
-
-      <PromoBanner {...promo} />
-      <Footer />
-    </div>
+      <div className="mt-8">
+        <Paginator page={page} totalPages={pagination?.totalPages ?? 0} onPageChange={setPage} />
+      </div>
+    </BrowseLayout>
   )
 }
 

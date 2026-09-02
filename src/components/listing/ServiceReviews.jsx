@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next'
+
+import i18n from '@/i18n'
 import { useCallback, useEffect, useState } from 'react'
 
 import UserLink from '@/components/UserLink'
@@ -9,6 +12,7 @@ import { getServiceReviews } from '@/services/serviceService'
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-BH', { dateStyle: 'medium' })
 
 function ServiceReviews({ serviceId }) {
+  const { t } = useTranslation()
   const [reviews, setReviews] = useState([])
   const [rating, setRating] = useState({ average: 0, count: 0 })
   const [pagination, setPagination] = useState(null)
@@ -24,7 +28,7 @@ function ServiceReviews({ serviceId }) {
       setRating(data.rating || { average: 0, count: 0 })
       setPagination(data.pagination)
     } catch (loadError) {
-      setError(loadError?.response?.data?.message || 'Reviews could not be loaded.')
+      setError(loadError?.response?.data?.message || i18n.t('reviews.reviewsLoadFailed'))
     } finally {
       setLoading(false)
     }
@@ -40,12 +44,12 @@ function ServiceReviews({ serviceId }) {
     <section className="mt-12" aria-labelledby="service-reviews-title">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id="service-reviews-title" className="font-heading text-xl font-semibold text-foreground">Client reviews</h2>
+          <h2 id="service-reviews-title" className="font-heading text-xl font-semibold text-foreground">{t('reviews.clientReviews')}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {rating.count ? `${Number(rating.average).toFixed(1)} from ${rating.count} verified contract reviews` : 'Reviews appear after contracts end.'}
+            {rating.count ? t('reviews.reviewsSummary', { average: Number(rating.average).toFixed(1), count: rating.count }) : t('reviews.reviewsAfterContracts')}
           </p>
         </div>
-        <Button size="sm" variant="ghost" onClick={loadReviews}>Refresh</Button>
+        <Button size="sm" variant="ghost" onClick={loadReviews}>{t('workspace.refresh')}</Button>
       </div>
 
       {error && <Alert variant="destructive" className="mt-4"><AlertDescription>{error}</AlertDescription></Alert>}
@@ -61,7 +65,7 @@ function ServiceReviews({ serviceId }) {
             <article key={review._id} className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
               <div className="flex items-start justify-between gap-3">
                 <UserLink user={review.reviewer} showAvatar className="font-medium" />
-                <span className="text-sm font-medium text-primary" aria-label={`${review.rating} out of 5 stars`}>
+                <span className="text-sm font-medium text-primary" aria-label={t('reviews.starsOutOfFive', { rating: review.rating })}>
                   {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
                 </span>
               </div>
@@ -71,14 +75,14 @@ function ServiceReviews({ serviceId }) {
           ))}
         </div>
       ) : (
-        <p className="mt-4 rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">No reviews for this service yet.</p>
+        <p className="mt-4 rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">{t('reviews.noReviewsYet')}</p>
       )}
 
       {pagination?.totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</Button>
-          <span className="text-sm text-muted-foreground">Page {page} of {pagination.totalPages}</span>
-          <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>Next</Button>
+          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>{t('common.previous')}</Button>
+          <span className="text-sm text-muted-foreground">{t('common.pageOfPlain', { page, total: pagination.totalPages })}</span>
+          <Button variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>{t('common.next')}</Button>
         </div>
       )}
     </section>
