@@ -36,6 +36,7 @@ import { getAdminAuditLogs, getApiErrorMessage } from "@/services/adminService"
 const resources = [
   ["User", "User", "Users"],
   ["Job", "Job", "Jobs"],
+  ["Service", "Service", "Services"],
   ["Proposal", "Proposal", "Proposals"],
   ["Contract", "Contract", "Contracts"],
   ["Transaction", "Transaction", "Transactions"],

@@ -3,10 +3,12 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Audit01Icon,
   BookOpen01Icon,
+  Briefcase01Icon,
   DashboardSquare01Icon,
   FolderLibraryIcon,
   Home01Icon,
   Logout01Icon,
+  PackageIcon,
   UserGroupIcon,
 } from "@hugeicons/core-free-icons"
 
@@ -31,6 +33,8 @@ import {
 const adminNavigation = [
   { id: "overview", label: "Overview", icon: DashboardSquare01Icon },
   { id: "users", label: "Users", icon: UserGroupIcon },
+  { id: "jobs", label: "Jobs", icon: Briefcase01Icon },
+  { id: "services", label: "Services", icon: PackageIcon },
   { id: "categories", label: "Categories", icon: FolderLibraryIcon },
   { id: "skills", label: "Skills", icon: BookOpen01Icon },
   { id: "audit-logs", label: "Audit logs", icon: Audit01Icon },

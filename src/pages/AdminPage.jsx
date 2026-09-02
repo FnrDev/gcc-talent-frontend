@@ -9,7 +9,9 @@ import {
 
 import AdminSidebar from "@/components/admin/AdminSidebar"
 import AuditLogsSection from "@/components/admin/AuditLogsSection"
+import JobsSection from "@/components/admin/JobsSection"
 import OverviewSection from "@/components/admin/OverviewSection"
+import ServicesSection from "@/components/admin/ServicesSection"
 import TaxonomySection from "@/components/admin/TaxonomySection"
 import UsersSection from "@/components/admin/UsersSection"
 import { Badge } from "@/components/ui/badge"
@@ -19,11 +21,13 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuth } from "@/context/AuthContext"
 
-const validSections = new Set(["overview", "users", "categories", "skills", "audit-logs"])
+const validSections = new Set(["overview", "users", "jobs", "services", "categories", "skills", "audit-logs"])
 
 const sectionLabels = {
   overview: "Overview",
   users: "Users",
+  jobs: "Jobs",
+  services: "Services",
   categories: "Categories",
   skills: "Skills",
   "audit-logs": "Audit logs",
@@ -86,6 +90,20 @@ function AdminPage() {
     content = (
       <UsersSection
         currentAdminId={user?._id}
+        onAccessDenied={handleAccessDenied}
+        onNotice={showNotice}
+      />
+    )
+  } else if (activeSection === "jobs") {
+    content = (
+      <JobsSection
+        onAccessDenied={handleAccessDenied}
+        onNotice={showNotice}
+      />
+    )
+  } else if (activeSection === "services") {
+    content = (
+      <ServicesSection
         onAccessDenied={handleAccessDenied}
         onNotice={showNotice}
       />

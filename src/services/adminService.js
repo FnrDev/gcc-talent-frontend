@@ -44,6 +44,46 @@ async function deleteAdminUser(id) {
   return response.data
 }
 
+async function getAdminJobs(params = {}) {
+  const response = await api.get('/admin/jobs', { params })
+  return response.data
+}
+
+async function getAdminJob(id) {
+  const response = await api.get(`/admin/jobs/${id}`)
+  return response.data
+}
+
+async function updateAdminJob(id, updates) {
+  const response = await api.patch(`/admin/jobs/${id}`, updates)
+  return response.data
+}
+
+async function deleteAdminJob(id) {
+  const response = await api.delete(`/admin/jobs/${id}`)
+  return response.data
+}
+
+async function getAdminServices(params = {}) {
+  const response = await api.get('/admin/services', { params })
+  return response.data
+}
+
+async function getAdminService(id) {
+  const response = await api.get(`/admin/services/${id}`)
+  return response.data
+}
+
+async function updateAdminService(id, updates) {
+  const response = await api.patch(`/admin/services/${id}`, updates)
+  return response.data
+}
+
+async function deleteAdminService(id) {
+  const response = await api.delete(`/admin/services/${id}`)
+  return response.data
+}
+
 async function getAdminCategories() {
   const response = await api.get('/admin/categories')
   return response.data
@@ -91,6 +131,14 @@ export {
   getAdminUser,
   updateAdminUser,
   deleteAdminUser,
+  getAdminJobs,
+  getAdminJob,
+  updateAdminJob,
+  deleteAdminJob,
+  getAdminServices,
+  getAdminService,
+  updateAdminService,
+  deleteAdminService,
   getAdminCategories,
   createAdminCategory,
   updateAdminCategory,
